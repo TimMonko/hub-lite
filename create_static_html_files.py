@@ -10,6 +10,7 @@ from string import Template
 
 from markdown_it import MarkdownIt
 from markdown_it.common.utils import escapeHtml
+from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from pygments import highlight
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import (
@@ -234,43 +235,40 @@ def generate_requirements_html(plugin: PluginPageData):
     return requirements_html
 
 
-def parse_version_specifier(specifier, default_min_version="3.6"):
-    # Parse version specifiers to get the min and max version
-    min_version = default_min_version
-    max_version = None
-    specifiers = specifier.split(",")
-
-    for spec in specifiers:
-        if ">=" in spec:
-            min_version = spec.split(">=")[1]
-        elif "<=" in spec:
-            max_version = spec.split("<=")[1]
-        elif "<" in spec:
-            # If strictly less than, consider the next lower minor version as the max
-            max_version = str(float(spec.split("<")[1]) - 0.1)
-
-    return min_version, max_version
+# The Python versions a plugin page can list: every CPython 3 minor release from
+# OLDEST_PYTHON_MINOR to NEWEST_PYTHON_MINOR. Bump the newest each October, when
+# a new Python is released.
+OLDEST_PYTHON_MINOR = 6
+NEWEST_PYTHON_MINOR = 15
 
 
-def generate_python_versions_html(
-    plugin: PluginPageData,
-    max_supported_version="3.11",
-    default_min_version="3.6",
-):
-    requirement = plugin.package_metadata_requires_python or ""
-    min_version, max_version = parse_version_specifier(requirement)
+def supported_python_versions(requires_python: str | None) -> list[str]:
+    """Return the Python minor versions ("3.10", ...) that ``requires_python`` allows.
 
-    # Use the given maximum version if no upper bound is specified
-    max_version = max_version if max_version else max_supported_version
-    min_minor = (
-        int(min_version.split(".")[1])
-        if min_version
-        else int(default_min_version.split(".")[1])
-    )
-    max_minor = int(max_version.split(".")[1])
+    A version is listed if its first release (3.x.0) satisfies the specifier,
+    so ">=3.10.2" lists 3.10 and "<3.13" stops at 3.12. A missing or invalid
+    specifier lists every known version.
+    """
+    candidates = [
+        f"3.{minor}" for minor in range(OLDEST_PYTHON_MINOR, NEWEST_PYTHON_MINOR + 1)
+    ]
+    try:
+        specifier = SpecifierSet(requires_python or "")
+    except InvalidSpecifier:
+        logger.warning(f"Invalid requires-python {requires_python!r}")
+        return candidates
+    allowed = [
+        version
+        for version in candidates
+        # A lower bound with a patch (>=3.10.2) still allows that minor.
+        if specifier.contains(f"{version}.0", prereleases=True)
+        or specifier.contains(f"{version}.99", prereleases=True)
+    ]
+    return allowed or candidates
 
-    # Generate a list of versions from min_version to max_version
-    versions = [f"3.{v}" for v in range(min_minor, max_minor + 1)]
+
+def generate_python_versions_html(plugin: PluginPageData):
+    versions = supported_python_versions(plugin.package_metadata_requires_python)
 
     # Construct HTML list items for each version
     python_versions_html = '<ul class="MetadataList_list__3DlqI list-none text-sm leading-normal inline space-y-sds-s MetadataList_inline__jHQLo">'
