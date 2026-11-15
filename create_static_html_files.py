@@ -9,7 +9,6 @@ import sys
 from string import Template
 
 from markdown_it import MarkdownIt
-from markdown_it.common.utils import escapeHtml
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from pygments import highlight
 from pygments.formatters import HtmlFormatter
@@ -113,7 +112,9 @@ def _code_block_plugin(md):
             "<pre"
             + md.renderer.renderAttrs(token)
             + "><code>"
-            + _highlight_code(escapeHtml(token.content), "", {})
+            # Pygments escapes the code itself; escaping it here too
+            # showed &quot; on the page (hub-lite#107).
+            + _highlight_code(token.content, "", {})
             + "</code></pre>\n"
         )
 
