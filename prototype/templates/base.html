@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}napari hub{% endblock %}</title>
+    <meta name="description" content="{% block description %}Discover napari plugins{% endblock %}">
+    {% block head %}{% endblock %}
+    {#- Relative asset paths: the site works from a file, a CI artifact or a sub-path. #}
+    <link rel="icon" href="{{ root }}static/images/silhouette-theme-aware.svg">
+    <link rel="stylesheet" href="{{ root }}static/css/hub.css">
+    <link rel="stylesheet" href="{{ root }}static/css/pygments.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="site-title" href="{{ root }}index.html">napari hub</a>
+      <nav aria-label="Site">
+        <a href="{{ root }}plugins_list.html">Browse plugins</a>
+        <a href="https://napari.org/stable/plugins/">Plugin docs</a>
+        <a href="https://napari.org">napari.org</a>
+      </nav>
+    </header>
+    <main>
+      {% block main %}{% endblock %}
+    </main>
+    <footer class="site-footer">
+      <p>Plugin data from the <a href="https://api.napari.org">napari plugin API</a>.</p>
+    </footer>
+  </body>
+</html>

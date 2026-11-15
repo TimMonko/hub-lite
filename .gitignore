@@ -8,3 +8,4 @@ static/plugins/
 _build/
 **/__pycache__/
 *.pyc
+/_build_proto/

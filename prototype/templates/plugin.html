@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{#- One plugin's page. Every value comes from page_model.PluginPage.
+    The data-pagefind-* names are a contract with search (R13): keep them. -#}
+
+{% block title %}{{ page.display_name }} | napari hub{% endblock %}
+{% block description %}{{ page.summary }}{% endblock %}
+{% block head %}
+    <link rel="canonical" href="https://napari-hub.org/plugins/{{ page.name }}.html">
+{% endblock %}
+
+{% macro value_list(items, filter=None, query=None) -%}
+  {%- if items -%}
+    <ul class="values">
+      {%- for item in items %}
+      <li>
+        {%- if query -%}<a href="{{ root }}index.html?{{ query }}={{ item | urlencode }}">{{ item }}</a>
+        {%- else -%}{{ item }}{%- endif -%}
+      </li>
+      {%- endfor %}
+    </ul>
+    {%- if filter %}<span hidden data-pagefind-filter="{{ filter }}">{{ items | join(", ") }}</span>{% endif -%}
+  {%- else -%}
+    <p class="missing">Not declared</p>
+  {%- endif -%}
+{%- endmacro %}
+
+{% block main %}
+<article class="plugin" data-pagefind-body>
+  <header class="plugin-header">
+    <h1 data-pagefind-meta="display_name">{{ page.display_name }}</h1>
+    <p class="summary" data-pagefind-meta="summary">{{ page.summary }}</p>
+    <p class="byline">
+      <span data-pagefind-meta="authors">{{ page.authors | join(", ") or "Unknown authors" }}</span>
+    </p>
+    <ul class="links">
+      {%- for link in page.links %}
+      <li><a class="link link-{{ link.kind }}" href="{{ link.url }}" rel="noreferrer">{{ link.label }}</a></li>
+      {%- endfor %}
+    </ul>
+  </header>
+
+  <div class="plugin-body">
+    <section class="readme" aria-label="Description" data-pagefind-weight="2">
+      {%- if page.readme_html %}{{ page.readme_html | safe }}{% else %}<p class="missing">No description available.</p>{% endif %}
+    </section>
+
+    <aside class="facts" aria-label="Plugin details">
+      <dl>
+        <dt>Version</dt>
+        <dd data-pagefind-meta="version">{{ page.version }}</dd>
+
+        <dt>Last updated</dt>
+        <dd data-pagefind-meta="last_updated">{{ page.release_date or "Unknown" }}</dd>
+
+        <dt>First released</dt>
+        <dd data-pagefind-meta="release_date">{{ page.first_released or "Unknown" }}</dd>
+
+        <dt>License</dt>
+        <dd><span data-pagefind-meta="license" data-pagefind-filter="license">{{ page.license or "Not declared" }}</span></dd>
+
+        <dt>Plugin type</dt>
+        <dd>{{ value_list(page.plugin_types, filter="plugin_types", query="pluginType") }}</dd>
+
+        <dt>Python versions</dt>
+        <dd>{{ value_list(page.python_versions, filter="python_versions", query="python") }}</dd>
+
+        <dt>Operating systems</dt>
+        <dd>{{ value_list(page.operating_systems, filter="os") }}</dd>
+
+        <dt>Opens</dt>
+        <dd>{{ value_list(page.reads, query="readerFileExtensions") }}</dd>
+
+        <dt>Saves</dt>
+        <dd>{{ value_list(page.writes, query="writerFileExtensions") }}</dd>
+
+        <dt>Requirements</dt>
+        <dd>{{ value_list(page.requirements, filter="requirements") }}</dd>
+      </dl>
+    </aside>
+  </div>
+</article>
+{% endblock %}
