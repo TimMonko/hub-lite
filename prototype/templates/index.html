@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{#- The home page: every plugin, listed in the page itself, plus search.
+
+    The list works with no JavaScript. static/js/home.js adds sorting, the
+    type filters and Pagefind search; it loads Pagefind only when someone
+    is about to search (focus on the search box), so the first open costs
+    this page and the stylesheets, nothing more.
+
+    Each card's data-* attributes are what home.js filters and sorts on.
+    Their values must match the plugin pages' data-pagefind-filter values
+    (plugin.html), so that a filter means the same with and without a
+    search term. -#}
+
+{% block head %}
+    <link rel="canonical" href="https://napari-hub.org/">
+    <script type="module" src="{{ root }}static/js/home.js"></script>
+{% endblock %}
+
+{% set type_labels = {"widget": "Widget", "reader": "Reader", "writer": "Writer", "sample_data": "Sample data"} %}
+
+{% block main %}
+<section class="intro">
+  <h1>Explore napari plugins</h1>
+  <p>
+    {{ pages | length }} plugins that add readers, writers, widgets and sample
+    data to <a href="https://napari.org">napari</a>.
+    <a href="https://napari.org/stable/plugins/">Write your own</a>.
+  </p>
+</section>
+
+<section class="browse" aria-labelledby="plugins-heading">
+  <h2 id="plugins-heading" class="visually-hidden">Plugins</h2>
+
+  {#- Hidden until home.js runs: without JavaScript, there is only the list. #}
+  <search class="finder" hidden>
+    <form role="search" action="" class="search-form">
+      <label for="q" class="visually-hidden">Search plugins</label>
+      <input id="q" name="q" type="search" autocomplete="off" spellcheck="false"
+             placeholder="Search plugins: a task, file format, author…" aria-describedby="search-hint">
+      <kbd id="search-hint" class="hint" title="Press / to search">/</kbd>
+    </form>
+
+    <div class="controls">
+      <fieldset class="chips">
+        <legend class="visually-hidden">Plugin type</legend>
+        {%- for value, label in type_labels.items() %}
+        <label class="chip"><input type="checkbox" name="pluginType" value="{{ value }}">{{ label }}</label>
+        {%- endfor %}
+      </fieldset>
+      <label class="sort">Sort
+        <select name="sort">
+          <option value="relevance" hidden>Best match</option>
+          <option value="updated" selected>Recently updated</option>
+          <option value="released">Newest</option>
+          <option value="name">Name</option>
+        </select>
+      </label>
+    </div>
+
+    {#- Filters arriving in the URL from a plugin page's links (e.g. ?python=3.12). #}
+    <p class="active-filters" hidden></p>
+  </search>
+
+  <p class="count" role="status" aria-live="polite">{{ pages | length }} plugins</p>
+
+  <ol class="cards" id="plugins">
+    {%- for page in pages %}
+    <li class="card"
+        data-name="{{ page.name }}"
+        data-title="{{ page.display_name | lower }}"
+        data-updated="{{ page.release_date or '' }}"
+        data-released="{{ page.first_released or '' }}"
+        data-plugin-types="{{ page.plugin_types | join('|') }}"
+        data-python-versions="{{ page.python_versions | join('|') }}"
+        data-reads="{{ page.reads | join('|') }}"
+        data-writes="{{ page.writes | join('|') }}">
+      <h3><a href="{{ root }}plugins/{{ page.name }}.html">{{ page.display_name }}</a></h3>
+      <p class="card-summary">{{ page.summary }}</p>
+      <p class="card-meta">
+        <span>{{ page.authors | join(", ") or "Unknown authors" }}</span>
+        {%- if page.release_date %}
+        <span>Updated <time datetime="{{ page.release_date }}">{{ page.release_date }}</time></span>
+        {%- endif %}
+      </p>
+      {%- if page.plugin_types %}
+      <ul class="tags" aria-label="Plugin type">
+        {%- for t in page.plugin_types %}<li>{{ type_labels.get(t, t) }}</li>{% endfor -%}
+      </ul>
+      {%- endif %}
+    </li>
+    {%- endfor %}
+  </ol>
+  <button type="button" class="more" hidden>Show more results</button>
+</section>
+{% endblock %}

@@ -1,6 +1,8 @@
 {#- icon("github"): napari's shared icon (static/brand/icons/), inline,
     filled with currentColor so it takes the text colour. Decorative: the
-    link text beside it says what it is. #}
+    link text beside it says what it is. The wrapper sets the size, so an
+    SVG's own width and height (napari-resources' logo says 824) don't
+    matter. #}
 {% macro icon(name) -%}
-{% include "icons/" ~ name ~ ".svg" %}
+<span class="icon" aria-hidden="true">{% include "icons/" ~ name ~ ".svg" %}</span>
 {%- endmacro %}

@@ -19,7 +19,8 @@
       </li>
       {%- endfor %}
     </ul>
-    {%- if filter %}<span hidden data-pagefind-filter="{{ filter }}">{{ items | join(", ") }}</span>{% endif -%}
+    {#- One element per value, so Pagefind sees each value, not one joined string. #}
+    {%- if filter %}{% for item in items %}<span hidden data-pagefind-filter="{{ filter }}">{{ item }}</span>{% endfor %}{% endif -%}
   {%- else -%}
     <p class="missing">Not declared</p>
   {%- endif -%}
@@ -72,10 +73,10 @@
         <dd>{{ value_list(page.operating_systems, filter="os") }}</dd>
 
         <dt>Opens</dt>
-        <dd>{{ value_list(page.reads, query="readerFileExtensions") }}</dd>
+        <dd>{{ value_list(page.reads, filter="reads", query="readerFileExtensions") }}</dd>
 
         <dt>Saves</dt>
-        <dd>{{ value_list(page.writes, query="writerFileExtensions") }}</dd>
+        <dd>{{ value_list(page.writes, filter="writes", query="writerFileExtensions") }}</dd>
 
         <dt>Requirements</dt>
         <dd>{{ value_list(page.requirements, filter="requirements") }}</dd>

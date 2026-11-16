@@ -38,8 +38,9 @@ a { color: var(--accent); }
 img { max-width: 100%; height: auto; }
 code, pre, kbd { font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace; font-size: 0.9em; }
 
-/* An inline SVG icon from templates/icons/, sized to the text beside it. */
-.icon { width: 1.1em; height: 1.1em; flex: none; }
+/* An inline SVG icon (templates/icon.html), sized to the text beside it. */
+.icon { display: inline-flex; width: 1.1em; height: 1.1em; flex: none; }
+.icon svg { width: 100%; height: 100%; }
 
 /* Site header: napari.org's navbar */
 .site-header {
@@ -74,6 +75,66 @@ code, pre, kbd { font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, m
 .footer-links { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; }
 .footer-links a { display: inline-flex; align-items: center; gap: 0.35rem; text-decoration: none; }
 .footer-links a:hover { color: var(--napari-primary-blue); }
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
+
+/* Home page: intro, search, filters, plugin cards */
+.intro h1 { margin: 0 0 0.25rem; font-size: clamp(1.75rem, 4vw, 2.5rem); }
+.intro p { margin: 0 0 1.5rem; color: var(--muted); max-width: var(--measure); }
+
+.finder { display: grid; gap: 0.75rem; margin-bottom: 1rem; }
+.search-form { position: relative; max-width: 40rem; }
+.search-form input {
+  box-sizing: border-box; width: 100%; padding: 0.7rem 2.5rem 0.7rem 0.9rem;
+  font: inherit; font-size: 1.05rem; color: inherit; background: var(--paper);
+  border: 2px solid var(--rule); border-radius: 8px;
+}
+.search-form input:focus { outline: none; border-color: var(--accent); }
+.hint {
+  position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%);
+  padding: 0 0.4rem; border: 1px solid var(--rule); border-radius: 4px; color: var(--muted);
+}
+.search-form input:focus + .hint { display: none; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; align-items: center; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.5rem; border: 0; padding: 0; margin: 0; }
+.chip {
+  display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;
+  padding: 0.25rem 0.75rem; border: 1px solid var(--rule); border-radius: 999px;
+}
+.chip:has(input:checked) { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+.chip input { margin: 0; accent-color: var(--paper); }
+.sort select { font: inherit; color: inherit; background: var(--paper); margin-left: 0.25rem; }
+.active-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; }
+.active-filters button {
+  font: inherit; font-size: 0.9rem; cursor: pointer; color: inherit;
+  background: var(--panel); border: 1px solid var(--rule); border-radius: 999px; padding: 0.15rem 0.7rem;
+}
+
+.count { color: var(--muted); margin: 0 0 0.75rem; }
+.cards {
+  display: grid; gap: 1rem; list-style: none; padding: 0; margin: 0;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+}
+.card {
+  display: flex; flex-direction: column; gap: 0.35rem;
+  padding: 1rem 1.25rem; background: var(--panel); border-radius: 8px;
+  content-visibility: auto; contain-intrinsic-size: auto 9rem; /* skip offscreen work */
+}
+.finder[hidden], .card[hidden] { display: none; }
+.card h3 { margin: 0; font-size: 1.1rem; overflow-wrap: anywhere; }
+.card h3 a { text-decoration: none; }
+.card h3 a:hover { text-decoration: underline; }
+.card-summary { margin: 0; flex: 1; }
+.card-meta { display: flex; flex-wrap: wrap; gap: 0 1rem; margin: 0; color: var(--muted); font-size: 0.875rem; }
+.tags { display: flex; flex-wrap: wrap; gap: 0.35rem; list-style: none; padding: 0; margin: 0.25rem 0 0; font-size: 0.8rem; }
+.tags li { padding: 0.05rem 0.5rem; border: 1px solid var(--rule); border-radius: 999px; }
+.more { display: block; margin: 1.5rem auto 0; font: inherit; padding: 0.5rem 1.25rem; cursor: pointer;
+  color: var(--paper); background: var(--accent); border: 0; border-radius: 6px; }
+.more[hidden] { display: none; }
 
 /* Plugin page */
 .plugin-header h1 { margin: 0 0 0.25rem; font-size: clamp(1.75rem, 4vw, 2.5rem); }

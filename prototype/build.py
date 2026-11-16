@@ -5,6 +5,7 @@ hub's plugin pages"). It reads the data today's build fetched
 (_build/data/plugin_page_data.json), so run `pixi run fetch-data` first.
 
     pixi run python prototype/build.py
+    pixi run python -m pagefind --site _build_proto   # the search index
 """
 
 import json
@@ -45,13 +46,24 @@ def main():
     for name in ("napari-tokens.css", "pygments.css"):
         shutil.copy(HERE / "static" / "brand" / name, OUT / "static" / "css")
 
+    (OUT / "static" / "js").mkdir(parents=True)
+    shutil.copy(HERE / "static" / "home.js", OUT / "static" / "js" / "home.js")
+
     sizes = []
+    pages = []
     for plugin in plugins:
         page = page_from_data(plugin)
         html = template.render(page=page, root="../")
         path = OUT / "plugins" / f"{page.name}.html"
         path.write_text(html, encoding="utf-8")
         sizes.append(len(html.encode()))
+        pages.append(page)
+
+    # The home page lists every plugin, most recently updated first (home.js's
+    # default sort, so the order is the same with or without JavaScript).
+    pages.sort(key=lambda page: page.release_date or "", reverse=True)
+    home = env.get_template("index.html").render(pages=pages, root="")
+    (OUT / "index.html").write_text(home, encoding="utf-8")
 
     elapsed = time.perf_counter() - start
     sizes.sort()
@@ -63,6 +75,7 @@ def main():
         f"max {sizes[-1] / 1024:.1f} KB"
     )
     print(f"CSS per page (cached after the first): {css / 1024:.1f} KB")
+    print(f"home page: {len(home.encode()) / 1024:.1f} KB HTML for {len(pages)} plugins")
 
 
 if __name__ == "__main__":
