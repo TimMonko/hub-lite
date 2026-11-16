@@ -1,29 +1,25 @@
 {% extends "base.html" %}
-{#- The home page: every plugin, listed in the page itself, plus search.
+{#- The home page: every plugin, listed in the page itself, plus search and filters.
 
-    The list works with no JavaScript. static/js/home.js adds sorting, the
-    type filters and Pagefind search; it loads Pagefind only when someone
-    is about to search (focus on the search box), so the first open costs
-    this page and the stylesheets, nothing more.
-
-    Each card's data-* attributes are what home.js filters and sorts on.
-    Their values must match the plugin pages' data-pagefind-filter values
-    (plugin.html), so that a filter means the same with and without a
-    search term. -#}
+    The list works with no JavaScript. static/js/home.js adds the search,
+    filters and sorting. Pagefind only ranks: it returns result ids, each
+    card carries its plugin's id (data-pf, from build.py), and every filter
+    and sort runs on the cards' data-* attributes, with or without a search
+    term. -#}
 
 {% block head %}
     <link rel="canonical" href="https://napari-hub.org/">
     <script type="module" src="{{ root }}static/js/home.js"></script>
 {% endblock %}
 
-{% set type_labels = {"widget": "Widget", "reader": "Reader", "writer": "Writer", "sample_data": "Sample data"} %}
+{% set type_labels = {"widget": "Widget", "reader": "Reader", "writer": "Writer", "sample_data": "Sample data", "theme": "Theme"} %}
 
 {% block main %}
 <section class="intro">
   <h1>Explore napari plugins</h1>
   <p>
-    {{ pages | length }} plugins that add readers, writers, widgets and sample
-    data to <a href="https://napari.org">napari</a>.
+    {{ cards | length }} plugins that add readers, writers, widgets, sample
+    data and themes to <a href="https://napari.org">napari</a>.
     <a href="https://napari.org/stable/plugins/">Write your own</a>.
   </p>
 </section>
@@ -33,47 +29,85 @@
 
   {#- Hidden until home.js runs: without JavaScript, there is only the list. #}
   <search class="finder" hidden>
-    <form role="search" action="" class="search-form">
+    <form role="search" class="search-form">
       <label for="q" class="visually-hidden">Search plugins</label>
       <input id="q" name="q" type="search" autocomplete="off" spellcheck="false"
-             placeholder="Search plugins: a task, file format, author…" aria-describedby="search-hint">
+             placeholder="Search plugins: a task, method, author…" aria-describedby="search-hint">
       <kbd id="search-hint" class="hint" title="Press / to search">/</kbd>
     </form>
 
-    <div class="controls">
-      <fieldset class="chips">
-        <legend class="visually-hidden">Plugin type</legend>
-        {%- for value, label in type_labels.items() %}
-        <label class="chip"><input type="checkbox" name="pluginType" value="{{ value }}">{{ label }}</label>
-        {%- endfor %}
-      </fieldset>
-      <label class="sort">Sort
-        <select name="sort">
-          <option value="relevance" hidden>Best match</option>
-          <option value="updated" selected>Recently updated</option>
+    <div class="filters">
+      <div class="filter">
+        <span class="filter-label" id="type-label">Plugin type</span>
+        <details class="dropdown">
+          <summary aria-describedby="type-label"><span class="dropdown-value">Any</span></summary>
+          <fieldset>
+            <legend class="visually-hidden">Plugin type: any of</legend>
+            {%- for value, label in type_labels.items() %}
+            <label><input type="checkbox" name="pluginType" value="{{ value }}"> {{ label }}</label>
+            {%- endfor %}
+          </fieldset>
+        </details>
+      </div>
+
+      <div class="filter">
+        <label class="filter-label" for="format">File format</label>
+        <div class="format">
+          <input id="format" name="format" list="formats" autocomplete="off" spellcheck="false"
+                 placeholder=".tif, .czi, .zarr…" size="11">
+          <label class="visually-hidden" for="formatMode">Which way</label>
+          <select id="formatMode" name="formatMode">
+            <option value="any">opens or saves</option>
+            <option value="opens">opens</option>
+            <option value="saves">saves</option>
+          </select>
+        </div>
+        <datalist id="formats">
+          {%- for f in formats %}<option value="{{ f }}">{% endfor -%}
+        </datalist>
+      </div>
+
+      <div class="filter">
+        <label class="filter-label" for="python">Python</label>
+        <select id="python" name="python">
+          <option value="">Any</option>
+          {%- for v in python_versions %}<option value="{{ v }}">{{ v }}</option>{% endfor %}
+        </select>
+      </div>
+
+      <div class="filter">
+        <label class="filter-label" for="updatedSince">Updated since</label>
+        <input id="updatedSince" name="updatedSince" type="date">
+      </div>
+
+      <div class="filter">
+        <label class="filter-label" for="sort">Sort</label>
+        <select id="sort" name="sort">
+          <option value="best">Best match</option>
+          <option value="updated">Recently updated</option>
           <option value="released">Newest</option>
           <option value="name">Name</option>
         </select>
-      </label>
-    </div>
+      </div>
 
-    {#- Filters arriving in the URL from a plugin page's links (e.g. ?python=3.12). #}
-    <p class="active-filters" hidden></p>
+      <button type="button" class="clear" hidden>Clear filters</button>
+    </div>
   </search>
 
-  <p class="count" role="status" aria-live="polite">{{ pages | length }} plugins</p>
+  <p class="count" role="status" aria-live="polite">{{ cards | length }} plugins</p>
 
   <ol class="cards" id="plugins">
-    {%- for page in pages %}
+    {%- for card in cards %}
+    {%- set page = card.page %}
     <li class="card"
-        data-name="{{ page.name }}"
+        data-pf="{{ card.pagefind_id }}"
         data-title="{{ page.display_name | lower }}"
         data-updated="{{ page.release_date or '' }}"
         data-released="{{ page.first_released or '' }}"
-        data-plugin-types="{{ page.plugin_types | join('|') }}"
-        data-python-versions="{{ page.python_versions | join('|') }}"
-        data-reads="{{ page.reads | join('|') }}"
-        data-writes="{{ page.writes | join('|') }}">
+        data-types="{{ page.plugin_types | join(' ') }}"
+        data-python="{{ page.python_versions | join(' ') }}"
+        data-opens="{{ card.opens | join(' ') }}"
+        data-saves="{{ card.saves | join(' ') }}">
       <h3><a href="{{ root }}plugins/{{ page.name }}.html">{{ page.display_name }}</a></h3>
       <p class="card-summary">{{ page.summary }}</p>
       <p class="card-meta">
@@ -90,6 +124,5 @@
     </li>
     {%- endfor %}
   </ol>
-  <button type="button" class="more" hidden>Show more results</button>
 </section>
 {% endblock %}

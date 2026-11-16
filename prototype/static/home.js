@@ -1,38 +1,37 @@
-// The home page's sorting, filters and search. Plain JavaScript, no build.
+// The home page's search, filters and sorting. Plain JavaScript, no build.
 //
-// The plugin list is already in the page (templates/index.html). With no
-// search term, this script only hides and reorders those cards, using their
-// data-* attributes. With a term, it asks Pagefind, then shows the matching
-// cards in Pagefind's order. Pagefind (its JS, WebAssembly and index) loads
-// when the search box is focused, not when the page opens.
-
-const PAGE_SIZE = 30; // search results shown per "Show more"
-const FIRST_SCREEN = 9; // shown as soon as their data arrives; the rest follow
-
-// Filter name (as in the plugin pages' data-pagefind-filter) -> the URL
-// parameter the plugin pages link with, and the card's data-* attribute.
-const FILTERS = {
-  plugin_types: { param: "pluginType", attr: "pluginTypes", label: "Plugin type" },
-  python_versions: { param: "python", attr: "pythonVersions", label: "Python" },
-  reads: { param: "readerFileExtensions", attr: "reads", label: "Opens" },
-  writes: { param: "writerFileExtensions", attr: "writes", label: "Saves" },
-};
+// The plugin list is already in the page (templates/index.html). Pagefind
+// only ranks: a search returns result ids, and each card carries its
+// plugin's id (data-pf). Every filter and sort then runs on the cards'
+// data-* attributes, the same way with or without a search term, and no
+// result's data is fetched. Pagefind (JS, WebAssembly, index) loads once the
+// page is shown and the browser is idle, or when someone heads for search.
 
 const finder = document.querySelector(".finder");
-const form = finder.querySelector("form");
-const input = form.querySelector("input[type=search]");
-const typeBoxes = [...finder.querySelectorAll("input[name=pluginType]")];
-const sortSelect = finder.querySelector("select[name=sort]");
-const activeFilters = finder.querySelector(".active-filters");
+const input = finder.querySelector("#q");
+const typeMenu = finder.querySelector(".dropdown");
+const typeBoxes = [...typeMenu.querySelectorAll("input[name=pluginType]")];
+const typeValue = typeMenu.querySelector(".dropdown-value");
+const formatInput = finder.querySelector("#format");
+const formatMode = finder.querySelector("#formatMode");
+const pythonSelect = finder.querySelector("#python");
+const sinceInput = finder.querySelector("#updatedSince");
+const sortSelect = finder.querySelector("#sort");
+const clearButton = finder.querySelector(".clear");
 const count = document.querySelector(".count");
 const list = document.getElementById("plugins");
-const moreButton = document.querySelector(".more");
 const cards = [...list.children];
-const cardByName = new Map(cards.map((card) => [card.dataset.name, card]));
 
-// State: the search term, plugin types (any of), and other filters from the
-// URL (all of; each a list of values).
-const state = { q: "", types: new Set(), sort: "updated", other: {} };
+const state = {
+  q: "",
+  types: new Set(), // any of
+  format: "", // ".tif"
+  formatMode: "any", // "any" | "opens" | "saves"
+  python: "",
+  since: "", // YYYY-MM-DD
+  sort: "", // "" = best match while searching, else recently updated
+};
+let rank = null; // the current search's results: Pagefind id -> position
 
 // --- Pagefind, loaded on first need -------------------------------------
 
@@ -47,149 +46,142 @@ function pagefind() {
   return pagefindPromise;
 }
 
-// --- Browsing: no search term -------------------------------------------
-
-function values(card, filter) {
-  const raw = card.dataset[FILTERS[filter].attr];
-  return raw ? raw.split("|") : [];
+async function search() {
+  const term = state.q;
+  const pf = await pagefind();
+  const response = await pf.debouncedSearch(term, {}, 120);
+  // null: a newer keystroke replaced this search. A changed term: the box
+  // was changed while this one ran.
+  if (response === null || state.q !== term) return;
+  rank = new Map(response.results.map((result, i) => [result.id, i]));
+  render();
 }
 
-function matchesFilters(card) {
-  if (state.types.size && !values(card, "plugin_types").some((t) => state.types.has(t))) {
-    return false;
+// --- Filtering and sorting ------------------------------------------------
+
+function words(card, key) {
+  const raw = card.dataset[key];
+  return raw ? raw.split(" ") : [];
+}
+
+// ".tif" finds .tif and .tiff (starts with) and .ome.tif (ends with).
+function normalizeFormat(text) {
+  const ext = text.trim().toLowerCase().replace(/^\*+/, "");
+  if (!ext || ext === ".") return "";
+  return ext.startsWith(".") ? ext : `.${ext}`;
+}
+
+function matches(card) {
+  if (rank && !rank.has(card.dataset.pf)) return false;
+  if (state.types.size && !words(card, "types").some((t) => state.types.has(t))) return false;
+  if (state.python && !words(card, "python").includes(state.python)) return false;
+  if (state.since && !(card.dataset.updated >= state.since)) return false;
+  if (state.format) {
+    const formats = state.formatMode === "any"
+      ? [...words(card, "opens"), ...words(card, "saves")]
+      : words(card, state.formatMode);
+    if (!formats.some((f) => f.startsWith(state.format) || f.endsWith(state.format))) return false;
   }
-  return Object.entries(state.other).every(([filter, wanted]) =>
-    wanted.every((value) => values(card, filter).includes(value)),
-  );
+  return true;
 }
 
 const SORTS = {
+  best: (a, b) => rank.get(a.dataset.pf) - rank.get(b.dataset.pf),
   updated: (a, b) => b.dataset.updated.localeCompare(a.dataset.updated),
   released: (a, b) => b.dataset.released.localeCompare(a.dataset.released),
   name: (a, b) => a.dataset.title.localeCompare(b.dataset.title),
 };
 
-function browse() {
-  const shown = cards.filter(matchesFilters).sort(SORTS[state.sort]);
+function effectiveSort() {
+  if (state.sort === "best" || !state.sort) return rank ? "best" : "updated";
+  return state.sort;
+}
+
+function filtersActive() {
+  return state.types.size || state.format || state.python || state.since;
+}
+
+function render() {
+  const shown = cards.filter(matches).sort(SORTS[effectiveSort()]);
   for (const card of cards) card.hidden = true;
   for (const card of shown) card.hidden = false;
   list.append(...shown); // moves them, in order, to the top of the list
-  moreButton.hidden = true;
-  count.textContent = `${shown.length} plugins`;
+
+  const narrowed = rank || filtersActive();
+  const matching = state.q ? ` match “${state.q}”` : "";
+  count.textContent = narrowed
+    ? `${shown.length} of ${cards.length} plugins${matching}`
+    : `${cards.length} plugins`;
+  list.dataset.state = rank ? "results" : "browse"; // for tests and measuring
+
+  sortSelect.value = effectiveSort();
+  sortSelect.options[0].disabled = !rank;
+  typeValue.textContent = state.types.size
+    ? typeBoxes.filter((b) => b.checked).map((b) => b.parentElement.textContent.trim()).join(", ")
+    : "Any";
+  clearButton.hidden = !filtersActive();
+  writeUrl();
 }
-
-// --- Searching: Pagefind ------------------------------------------------
-
-function pagefindFilters() {
-  const filters = {};
-  if (state.types.size) filters.plugin_types = { any: [...state.types] };
-  for (const [filter, wanted] of Object.entries(state.other)) filters[filter] = wanted;
-  return filters;
-}
-
-let results = []; // the current search's results, best first
-let shownResults = 0;
-
-async function search() {
-  const term = state.q;
-  const pf = await pagefind();
-  const response = await pf.debouncedSearch(term, { filters: pagefindFilters() }, 150);
-  // null: a newer keystroke replaced this search. A changed term: the box was
-  // cleared (or changed) while this one ran, and browse() has the list now.
-  if (response === null || state.q !== term) return;
-  results = response.results;
-  shownResults = 0;
-  for (const card of cards) card.hidden = true;
-  count.textContent =
-    results.length === 1 ? `1 plugin matches “${state.q}”` : `${results.length} plugins match “${state.q}”`;
-  // Each result costs a fetch, so fill the first screen first.
-  await showMoreResults(FIRST_SCREEN);
-  await showMoreResults(PAGE_SIZE - FIRST_SCREEN);
-}
-
-async function showMoreResults(size = PAGE_SIZE) {
-  const batch = results.slice(shownResults, shownResults + size);
-  const searchedFor = results;
-  if (!batch.length) return;
-  // Each result's data holds its URL; the URL's file name is the card's name.
-  const pages = await Promise.all(batch.map((result) => result.data()));
-  if (searchedFor !== results) return; // a newer search finished first
-  const found = pages
-    .map((page) => cardByName.get(decodeURIComponent(page.url.split("/").pop().replace(/\.html$/, ""))))
-    .filter(Boolean);
-  const before = list.children[cards.filter((c) => !c.hidden).length] ?? null;
-  for (const card of found) {
-    card.hidden = false;
-    list.insertBefore(card, before);
-  }
-  shownResults += batch.length;
-  moreButton.hidden = shownResults >= results.length;
-  list.dataset.state = "results"; // for tests and the measuring script
-}
-
-// --- Wiring --------------------------------------------------------------
 
 function update() {
-  const searching = state.q.length > 0;
-  sortSelect.disabled = searching;
-  sortSelect.value = searching ? "relevance" : state.sort;
-  sortSelect.title = searching ? "Search results are ordered by best match" : "";
-  renderActiveFilters();
-  writeUrl();
-  if (searching) search();
-  else browse();
+  if (state.q) {
+    search(); // renders when results arrive; until then the list stays
+  } else {
+    rank = null;
+    render();
+  }
 }
 
-function renderActiveFilters() {
-  activeFilters.replaceChildren();
-  for (const [filter, wanted] of Object.entries(state.other)) {
-    for (const value of wanted) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.textContent = `${FILTERS[filter].label}: ${value} ✕`;
-      button.setAttribute("aria-label", `Remove filter ${FILTERS[filter].label} ${value}`);
-      button.addEventListener("click", () => {
-        state.other[filter] = wanted.filter((v) => v !== value);
-        if (!state.other[filter].length) delete state.other[filter];
-        update();
-      });
-      activeFilters.append(button);
-    }
-  }
-  activeFilters.hidden = !activeFilters.children.length;
-}
+// --- The URL holds the state, so a view can be shared -----------------------
 
 function readUrl() {
   const params = new URLSearchParams(location.search);
   state.q = (params.get("q") ?? "").trim();
-  state.types = new Set(params.getAll(FILTERS.plugin_types.param));
-  state.sort = SORTS[params.get("sort")] ? params.get("sort") : "updated";
-  for (const [filter, { param }] of Object.entries(FILTERS)) {
-    if (filter !== "plugin_types" && params.getAll(param).length) state.other[filter] = params.getAll(param);
+  state.types = new Set(params.getAll("pluginType"));
+  state.format = normalizeFormat(params.get("format") ?? "");
+  state.formatMode = ["opens", "saves"].includes(params.get("formatMode")) ? params.get("formatMode") : "any";
+  // Plugin pages link with napari hub's older names for these.
+  if (params.get("readerFileExtensions")) {
+    state.format = normalizeFormat(params.get("readerFileExtensions"));
+    state.formatMode = "opens";
+  } else if (params.get("writerFileExtensions")) {
+    state.format = normalizeFormat(params.get("writerFileExtensions"));
+    state.formatMode = "saves";
   }
+  state.python = params.get("python") ?? "";
+  state.since = params.get("updatedSince") ?? "";
+  state.sort = SORTS[params.get("sort")] ? params.get("sort") : "";
+
   input.value = state.q;
   for (const box of typeBoxes) box.checked = state.types.has(box.value);
+  formatInput.value = state.format;
+  formatMode.value = state.formatMode;
+  pythonSelect.value = state.python;
+  if (pythonSelect.value !== state.python) state.python = ""; // not an offered version
+  sinceInput.value = state.since;
 }
 
 function writeUrl() {
   const params = new URLSearchParams();
   if (state.q) params.set("q", state.q);
-  for (const type of state.types) params.append(FILTERS.plugin_types.param, type);
-  for (const [filter, wanted] of Object.entries(state.other)) {
-    for (const value of wanted) params.append(FILTERS[filter].param, value);
-  }
-  if (state.sort !== "updated") params.set("sort", state.sort);
+  for (const type of state.types) params.append("pluginType", type);
+  if (state.format) params.set("format", state.format);
+  if (state.format && state.formatMode !== "any") params.set("formatMode", state.formatMode);
+  if (state.python) params.set("python", state.python);
+  if (state.since) params.set("updatedSince", state.since);
+  if (state.sort) params.set("sort", state.sort);
   const query = params.toString();
   history.replaceState(null, "", query ? `?${query}` : location.pathname);
 }
 
-// Load Pagefind once the page is shown and the browser is idle, or as soon
-// as someone heads for the search box, whichever comes first.
+// --- Wiring --------------------------------------------------------------
+
 input.addEventListener("focus", pagefind, { once: true });
 input.addEventListener("pointerenter", pagefind, { once: true });
 const whenIdle = window.requestIdleCallback ?? ((callback) => setTimeout(callback, 1));
 if (document.readyState === "complete") whenIdle(pagefind);
 else window.addEventListener("load", () => whenIdle(pagefind), { once: true });
+
 input.addEventListener("input", () => {
   state.q = input.value.trim();
   update();
@@ -201,18 +193,55 @@ input.addEventListener("keydown", (event) => {
     update();
   }
 });
-form.addEventListener("submit", (event) => event.preventDefault());
+finder.querySelector("form").addEventListener("submit", (event) => event.preventDefault());
+
 for (const box of typeBoxes) {
   box.addEventListener("change", () => {
     state.types = new Set(typeBoxes.filter((b) => b.checked).map((b) => b.value));
-    update();
+    render();
   });
 }
+// Close the type menu on a click elsewhere or Escape.
+document.addEventListener("click", (event) => {
+  if (!typeMenu.contains(event.target)) typeMenu.open = false;
+});
+typeMenu.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    typeMenu.open = false;
+    typeMenu.querySelector("summary").focus();
+  }
+});
+
+formatInput.addEventListener("input", () => {
+  state.format = normalizeFormat(formatInput.value);
+  render();
+});
+formatMode.addEventListener("change", () => {
+  state.formatMode = formatMode.value;
+  render();
+});
+pythonSelect.addEventListener("change", () => {
+  state.python = pythonSelect.value;
+  render();
+});
+sinceInput.addEventListener("change", () => {
+  state.since = sinceInput.value;
+  render();
+});
 sortSelect.addEventListener("change", () => {
   state.sort = sortSelect.value;
-  update();
+  render();
 });
-moreButton.addEventListener("click", () => showMoreResults());
+clearButton.addEventListener("click", () => {
+  Object.assign(state, { types: new Set(), format: "", formatMode: "any", python: "", since: "" });
+  for (const box of typeBoxes) box.checked = false;
+  formatInput.value = "";
+  formatMode.value = "any";
+  pythonSelect.value = "";
+  sinceInput.value = "";
+  render();
+});
+
 document.addEventListener("keydown", (event) => {
   const typing = event.target.closest?.("input, select, textarea");
   if (event.key === "/" && !typing) {
@@ -223,4 +252,5 @@ document.addEventListener("keydown", (event) => {
 
 finder.hidden = false;
 readUrl();
-update();
+render(); // filters from the URL apply at once; search results follow
+if (state.q) search();

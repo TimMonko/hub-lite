@@ -99,20 +99,38 @@ code, pre, kbd { font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, m
 }
 .search-form input:focus + .hint { display: none; }
 
-.controls { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; align-items: center; }
-.chips { display: flex; flex-wrap: wrap; gap: 0.5rem; border: 0; padding: 0; margin: 0; }
-.chip {
-  display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;
-  padding: 0.25rem 0.75rem; border: 1px solid var(--rule); border-radius: 999px;
+/* The filter bar: each filter is a small label over its control. */
+.filters { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; align-items: end; }
+.filter { display: grid; gap: 0.2rem; }
+.filter-label { font-size: 0.8rem; font-weight: 700; color: var(--muted); }
+.filters select, .filters input, .dropdown summary {
+  box-sizing: border-box; height: 2.25rem; padding: 0 0.6rem;
+  font: inherit; color: inherit; background: var(--paper);
+  border: 1px solid var(--rule); border-radius: 6px;
 }
-.chip:has(input:checked) { background: var(--accent); border-color: var(--accent); color: var(--paper); }
-.chip input { margin: 0; accent-color: var(--paper); }
-.sort select { font: inherit; color: inherit; background: var(--paper); margin-left: 0.25rem; }
-.active-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; }
-.active-filters button {
-  font: inherit; font-size: 0.9rem; cursor: pointer; color: inherit;
-  background: var(--panel); border: 1px solid var(--rule); border-radius: 999px; padding: 0.15rem 0.7rem;
+.filters :is(select, input):focus-visible, .dropdown summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.format { display: flex; }
+.format input { border-radius: 6px 0 0 6px; width: 8.5rem; }
+.format select { border-radius: 0 6px 6px 0; border-left: 0; }
+
+/* Plugin type: a <details> menu of checkboxes. Its label sits in the summary,
+   which shows the choice ("Any", "Reader, Writer") in a control-like box. */
+.dropdown { position: relative; }
+.dropdown summary { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; list-style: none; min-width: 9rem; }
+.dropdown summary::-webkit-details-marker { display: none; }
+.dropdown summary::after { content: "▾"; margin-left: auto; color: var(--muted); }
+.dropdown fieldset {
+  position: absolute; z-index: 1; top: calc(100% + 0.25rem); left: 0; margin: 0;
+  display: grid; gap: 0.35rem; min-width: 11rem; padding: 0.6rem 0.8rem;
+  background: var(--paper); border: 1px solid var(--rule); border-radius: 6px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.15);
 }
+.dropdown fieldset label { display: flex; gap: 0.5rem; align-items: center; cursor: pointer; white-space: nowrap; }
+.clear {
+  height: 2.25rem; padding: 0 0.8rem; font: inherit; cursor: pointer; color: var(--accent);
+  background: none; border: 1px solid transparent; border-radius: 6px; text-decoration: underline;
+}
+.clear[hidden] { display: none; }
 
 .count { color: var(--muted); margin: 0 0 0.75rem; }
 .cards {
@@ -132,9 +150,6 @@ code, pre, kbd { font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, m
 .card-meta { display: flex; flex-wrap: wrap; gap: 0 1rem; margin: 0; color: var(--muted); font-size: 0.875rem; }
 .tags { display: flex; flex-wrap: wrap; gap: 0.35rem; list-style: none; padding: 0; margin: 0.25rem 0 0; font-size: 0.8rem; }
 .tags li { padding: 0.05rem 0.5rem; border: 1px solid var(--rule); border-radius: 999px; }
-.more { display: block; margin: 1.5rem auto 0; font: inherit; padding: 0.5rem 1.25rem; cursor: pointer;
-  color: var(--paper); background: var(--accent); border: 0; border-radius: 6px; }
-.more[hidden] { display: none; }
 
 /* Plugin page */
 .plugin-header h1 { margin: 0 0 0.25rem; font-size: clamp(1.75rem, 4vw, 2.5rem); }
