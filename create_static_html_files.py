@@ -8,8 +8,10 @@ import re
 import sys
 from html import escape
 from string import Template
+from urllib.parse import urljoin, urlsplit
 
 from markdown_it import MarkdownIt
+from mdit_py_plugins.anchors import anchors_plugin
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from pygments import highlight
 from pygments.formatters import HtmlFormatter
@@ -118,7 +120,87 @@ def _code_block_plugin(md):
     md.renderer.rules["code_block"] = _render_code_block
 
 
-md = MarkdownIt("gfm-like", {"highlight": _highlight_code}).use(_code_block_plugin)
+def github_repo_url(url: str | None) -> str | None:
+    """https://github.com/<user>/<repo> for a GitHub URL, else None."""
+    match = re.search(r"github\.com/([^/#?]+)/([^/#?]+)", url or "")
+    if not match:
+        return None
+    user, repo = match.groups()
+    return f"https://github.com/{user}/{repo.removesuffix('.git')}"
+
+
+def resolve_readme_url(url: str, repo_url: str, kind: str) -> str:
+    """Point a relative README URL at the file in the plugin's repository.
+
+    On GitHub and PyPI a README link like docs/usage.md resolves next to
+    the README; on the hub it would point into the hub and 404. kind is
+    "blob" for links (GitHub's page for the file) or "raw" for images.
+    Absolute URLs, in-page anchors and data: URLs are left alone.
+
+    A README in a subfolder of a monorepo resolves from the repository's
+    root, which may be wrong; the metadata doesn't say where it lives.
+    """
+    if not url or url.startswith(("#", "//")) or urlsplit(url).scheme:
+        return url
+    return urljoin(f"{repo_url}/{kind}/HEAD/", url.lstrip("/"))
+
+
+# src="..." and href="..." in raw HTML that a README embeds (<img>, <a>).
+_HTML_URL = re.compile(r"""\b(src|href)=(["'])(.*?)\2""", re.IGNORECASE)
+
+
+def _repo_links_plugin(md):
+    """Rewrite a README's relative links and images to its repository.
+
+    The repository comes from env["repo_url"], passed to md.render.
+    """
+
+    def rewrite_html(html, repo_url):
+        def replace(match):
+            attr, quote, url = match.groups()
+            kind = "raw" if attr.lower() == "src" else "blob"
+            new_url = resolve_readme_url(url, repo_url, kind)
+            return f"{attr}={quote}{new_url}{quote}"
+
+        return _HTML_URL.sub(replace, html)
+
+    def rewrite(state):
+        repo_url = state.env.get("repo_url")
+        if not repo_url:
+            return
+        for block in state.tokens:
+            for token in [block, *(block.children or [])]:
+                if token.type == "link_open":
+                    href = str(token.attrGet("href") or "")
+                    token.attrSet("href", resolve_readme_url(href, repo_url, "blob"))
+                elif token.type == "image":
+                    src = str(token.attrGet("src") or "")
+                    token.attrSet("src", resolve_readme_url(src, repo_url, "raw"))
+                elif token.type in ("html_block", "html_inline"):
+                    token.content = rewrite_html(token.content, repo_url)
+
+    md.core.ruler.push("repo_links", rewrite)
+
+
+md = (
+    MarkdownIt("gfm-like", {"highlight": _highlight_code})
+    .use(_code_block_plugin)
+    .use(_repo_links_plugin)
+    # GitHub-style heading ids, so a README's own #section links work.
+    .use(anchors_plugin, max_level=6)
+)
+
+
+def render_readme(markdown: str, home_github: str | None) -> str:
+    """A plugin's README as HTML, without its first heading.
+
+    The page already shows the plugin's name, which is what a README's
+    first "# heading" usually says.
+    """
+    lines = markdown.split("\n")
+    if lines and lines[0].startswith("#"):
+        lines = lines[1:]
+    return md.render("\n".join(lines), {"repo_url": github_repo_url(home_github)})
 
 
 def create_plugins_list_html(plugins: list[PluginPageData], build_dir: str):
@@ -377,13 +459,9 @@ def generate_home_html(plugin: PluginPageData):
 def create_plugin_page_html(plugin: PluginPageData, template, plugin_dir):
     # package_metadata_description is the README content (we assume markdown)
     if plugin.package_metadata_description:
-        # remove the first line if it's a markdown header
-        lines = plugin.package_metadata_description.split("\n")
-        if lines and lines[0].startswith("#"):
-            no_first_header = "\n".join(lines[1:])
-        else:
-            no_first_header = "\n".join(lines)
-        html_description = md.render(no_first_header)
+        html_description = render_readme(
+            plugin.package_metadata_description, plugin.home_github
+        )
     else:
         html_description = "No description available"
 
