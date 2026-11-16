@@ -6,6 +6,7 @@ import logging
 import os
 import re
 import sys
+from html import escape
 from string import Template
 
 from markdown_it import MarkdownIt
@@ -16,6 +17,7 @@ from pygments.lexers import (
     PythonLexer,
     get_lexer_by_name,
 )
+from pygments.util import ClassNotFound
 
 
 @dataclasses.dataclass
@@ -69,29 +71,32 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def _highlight_code(code, lang_name, lang_attrs):
-    """Highlight a block of code using Pygments.
-    This is the signature markdown-it uses to call the highlight function.
-    Args:
-        code (str): The code to highlight.
-        lang_name (str): The language of the code.
-        lang_attrs (dict): Additional attributes for the code block.
-            (ignored here because I don't know how to use them)
-    """
+def _lexer_for(lang_name):
+    """The Pygments lexer for a code block's language, or the fallback."""
+    if lang_name in MISSING_LEXERS:
+        return FALLBACK_LEXER
     try:
-        if lang_name in MISSING_LEXERS:
-            # Use fallback lexer
-            return highlight(code, FALLBACK_LEXER, HtmlFormatter())
-        else:
-            lexer = get_lexer_by_name(lang_name)
-    except Exception as e:
-        # Captures the case that someone introduces a lexer name
-        # not available in Pygments or in our list of missing lexers
-        logger.error(f"Unknown error. Using fallback lexer: {e}")
-        lexer = FALLBACK_LEXER
+        return get_lexer_by_name(lang_name)
+    except ClassNotFound:
+        logger.warning(f"No Pygments lexer for {lang_name!r}; using the fallback")
+        return FALLBACK_LEXER
 
-    formatter = HtmlFormatter()
-    return highlight(code, lexer, formatter)
+
+def _highlight_code(code, lang_name, lang_attrs):
+    """Highlight a block of code with Pygments, as one <pre> element.
+
+    This is the signature markdown-it uses to call the highlight function.
+    lang_attrs (extra attributes in the fence's info string) are ignored.
+
+    The result must start with "<pre": otherwise markdown-it wraps it in its
+    own <pre><code>, and Pygments' <div><pre> ended up inside that, giving
+    every code block two backgrounds and two sets of padding.
+    """
+    lexer = _lexer_for(lang_name)
+    # nowrap: only the highlighted spans; the <pre> is written here.
+    spans = highlight(code, lexer, HtmlFormatter(nowrap=True))
+    lang_class = f' class="language-{escape(lang_name)}"' if lang_name else ""
+    return f'<pre class="highlight"><code{lang_class}>{spans}</code></pre>\n'
 
 
 def _code_block_plugin(md):
@@ -106,17 +111,9 @@ def _code_block_plugin(md):
         https://github.com/executablebooks/markdown-it-py
             /blob/36a9d146af52265420de634cc2e25d1d40cfcdb7/markdown_it/renderer.py#L224
         """
-        token = tokens[idx]
-
-        return (
-            "<pre"
-            + md.renderer.renderAttrs(token)
-            + "><code>"
-            # Pygments escapes the code itself; escaping it here too
-            # showed &quot; on the page (hub-lite#107).
-            + _highlight_code(token.content, "", {})
-            + "</code></pre>\n"
-        )
+        # Pygments escapes the code itself; escaping it here too
+        # showed &quot; on the page (hub-lite#107).
+        return _highlight_code(tokens[idx].content, "", {})
 
     md.renderer.rules["code_block"] = _render_code_block
 
