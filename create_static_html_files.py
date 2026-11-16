@@ -10,6 +10,7 @@ from html import escape
 from string import Template
 from urllib.parse import urljoin, urlsplit
 
+import nh3
 from markdown_it import MarkdownIt
 from mdit_py_plugins.anchors import anchors_plugin
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
@@ -200,7 +201,64 @@ def render_readme(markdown: str, home_github: str | None) -> str:
     lines = markdown.split("\n")
     if lines and lines[0].startswith("#"):
         lines = lines[1:]
-    return md.render("\n".join(lines), {"repo_url": github_repo_url(home_github)})
+    html = md.render("\n".join(lines), {"repo_url": github_repo_url(home_github)})
+    return sanitize_readme_html(html)
+
+
+# What a README may keep, on top of nh3's defaults (the common formatting
+# tags; img with src, alt, width and height; links with href).
+_README_TAGS = nh3.ALLOWED_TAGS | {"picture", "source", "video"}
+_README_ATTRIBUTES = {
+    **nh3.ALLOWED_ATTRIBUTES,
+    # markdown-it writes a table column's alignment as style="text-align:...";
+    # READMEs size images with style too. Only the properties in
+    # _README_STYLES survive, so a style can't cover or restyle the page.
+    "td": nh3.ALLOWED_ATTRIBUTES["td"] | {"style", "width"},
+    "th": nh3.ALLOWED_ATTRIBUTES["th"] | {"style", "width"},
+    "img": nh3.ALLOWED_ATTRIBUTES["img"] | {"style"},
+    # Demo videos (GitHub user attachments); video can't run script.
+    "video": {
+        "src",
+        "poster",
+        "controls",
+        "width",
+        "height",
+        "muted",
+        "loop",
+        "playsinline",
+    },
+    # Pygments marks tokens with classes; the code block is <pre class="highlight">.
+    "pre": {"class"},
+    "code": {"class"},
+    "span": {"class"},
+    # Heading anchors, so a README's #section links work.
+    **{f"h{level}": {"id", "align"} for level in range(1, 7)},
+    # Centred logos and badges: <p align="center">, <div align="center">.
+    "p": {"align"},
+    "div": {"align"},
+    # Light and dark logos: <picture><source media="..." srcset="..."></picture>.
+    "source": {"src", "media", "srcset", "type", "width", "height"},
+    "details": {"open"},
+}
+_README_STYLES = {"text-align", "width", "height", "max-width"}
+
+
+def sanitize_readme_html(html: str) -> str:
+    """Keep a README's formatting and drop anything that could run code.
+
+    A README is whatever a plugin's author uploaded to PyPI, and markdown-it
+    passes its raw HTML through. Without this, a <script> tag or an onerror=
+    attribute in a README would run on its hub page. nh3 (the Rust ammonia
+    sanitizer, which PyPI's readme_renderer also uses) keeps an allow-list of
+    tags and attributes, removes scripts, event handlers, styles and iframes,
+    and refuses javascript: URLs. Links get rel="noopener noreferrer".
+    """
+    return nh3.clean(
+        html,
+        tags=_README_TAGS,
+        attributes=_README_ATTRIBUTES,
+        filter_style_properties=_README_STYLES,
+    )
 
 
 def create_plugins_list_html(plugins: list[PluginPageData], build_dir: str):
