@@ -1,21 +1,22 @@
-"""Copy napari's brand files (colours, code colours, icons, logos) into static/brand/.
+"""Copy napari-sphinx-theme's brand files (colours, code colours, icons) into static/brand/.
 
-The colours, code colours and icons come from napari-sphinx-theme's brand
-folder, and the napari logos from napari-resources: the copies napari.org and
-napari itself use. The copy is committed, so the build and a visitor's first
-load need neither package nor a CDN. Run this to move to new releases:
+They come from the theme's brand folder, the one copy napari.org and the
+other napari sites share. The copy is committed, so the build doesn't need
+the theme (or Sphinx, which it depends on) and a visitor's first load
+doesn't need a CDN. Run this to move to a new theme release, giving the
+release's full commit SHA, or a checkout's path:
 
     git ls-remote https://github.com/napari/napari-sphinx-theme refs/tags/<tag>
-    pixi run python prototype/update_brand.py <theme commit> ../napari-resources
-    pixi run python prototype/update_brand.py ../napari-sphinx-theme ../napari-resources
+    pixi run python prototype/update_brand.py <40-character commit SHA>
+    pixi run python prototype/update_brand.py ../napari-sphinx-theme
 
-The theme's files can come from a checkout, or from jsDelivr's GitHub
-endpoint by the release's full commit SHA (not its tag: a tag can be moved to
-other content later, a commit can't). napari-resources must be a checkout of
-the release, installed (`uv sync`): its logos are generated at install and
-aren't in git, so they can't be fetched by commit. SOURCE records the
-checkout's commit. The files are pasted into pages (the SVGs inline), so
-review their diff like code. static/brand/SOURCE records where they came from.
+A commit is fetched from jsDelivr's GitHub endpoint by its SHA, not by tag: a
+tag can be moved to other content later, a commit can't. The files are
+pasted into pages (the SVGs inline), so review their diff like code.
+static/brand/SOURCE records where they came from.
+
+napari's logos are not here: they come from the napari-resources package,
+a dependency of the build (build.py).
 """
 
 import re
@@ -26,32 +27,18 @@ import urllib.request
 from pathlib import Path
 
 OUT = Path(__file__).parent / "static" / "brand"
-
-# repository -> {path in the repository: path under static/brand/}
-THEME_BRAND = "napari_sphinx_theme/static/brand"
-SOURCES = {
-    "napari-sphinx-theme": {
-        f"{THEME_BRAND}/{name}": name
-        for name in [
-            "napari-tokens.css",
-            "pygments.css",
-            "icons/github.svg",
-            "icons/image-sc.svg",
-            "icons/mastodon.svg",
-            "icons/napari-hub.svg",
-            "icons/pypi.svg",
-            "icons/zulip.svg",
-        ]
-    },
-    "napari-resources": {
-        "src/napari_resources/resources/logos/special/silhouette-current-color.svg": "icons/napari.svg",
-        # The header logo: the dark one has a gold border that shows on the dark navbar.
-        "src/napari_resources/resources/logos/generated/gradient-plain-light.svg": "logos/napari-light.svg",
-        "src/napari_resources/resources/logos/generated/gradient-plain-dark.svg": "logos/napari-dark.svg",
-    },
-}
-# Generated at install, not in git, so only a checkout has them.
-CHECKOUT_ONLY = {"napari-resources"}
+REPO = "napari-sphinx-theme"
+BRAND = "napari_sphinx_theme/static/brand"
+FILES = [
+    "napari-tokens.css",
+    "pygments.css",
+    "icons/github.svg",
+    "icons/image-sc.svg",
+    "icons/mastodon.svg",
+    "icons/napari-hub.svg",
+    "icons/pypi.svg",
+    "icons/zulip.svg",
+]
 
 
 def head_commit(checkout: Path) -> str:
@@ -68,53 +55,45 @@ def head_commit(checkout: Path) -> str:
     return result.stdout.strip() or "unknown"
 
 
-def copy(repo: str, source: str) -> str:
-    """Copy one repository's files from a checkout or a commit; describe where from."""
-    files = SOURCES[repo]
-    checkout = Path(source)
-    if checkout.is_dir():
-        for src, dest in files.items():
-            if not (checkout / src).is_file():
-                sys.exit(
-                    f"{checkout / src} is missing. Is the {repo} checkout installed (uv sync)?"
-                )
-            (OUT / dest).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy(checkout / src, OUT / dest)
-        return f"a {repo} checkout ({checkout.name}) at commit {head_commit(checkout)}"
-    if repo in CHECKOUT_ONLY:
+def from_checkout(checkout: Path) -> str:
+    for name in FILES:
+        (OUT / name).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(checkout / BRAND / name, OUT / name)
+    return (
+        f"a {REPO} checkout ({checkout.name}) at commit {head_commit(checkout)}; "
+        "pin a release commit before merging"
+    )
+
+
+def from_commit(commit: str) -> str:
+    if not re.fullmatch(r"[0-9a-f]{40}", commit):
         sys.exit(
-            f"Give a {repo} checkout's path: its logos are generated at install, not in git."
+            f"{commit!r} is not a full commit SHA. Give a checkout's path, or the "
+            "40-character commit of a release (git ls-remote ... refs/tags/<tag>)."
         )
-    if not re.fullmatch(r"[0-9a-f]{40}", source):
-        sys.exit(
-            f"{source!r} is not a full commit SHA. Give a {repo} checkout's path, or "
-            "the 40-character commit of a release (git ls-remote ... refs/tags/<tag>)."
-        )
-    base = f"https://cdn.jsdelivr.net/gh/napari/{repo}@{source}"
-    for src, dest in files.items():
-        (OUT / dest).parent.mkdir(parents=True, exist_ok=True)
-        with urllib.request.urlopen(f"{base}/{src}") as response:  # noqa: S310 (fixed https URL)
-            (OUT / dest).write_bytes(response.read())
-    return f"{repo} commit {source}"
+    base = f"https://cdn.jsdelivr.net/gh/napari/{REPO}@{commit}/{BRAND}"
+    for name in FILES:
+        (OUT / name).parent.mkdir(parents=True, exist_ok=True)
+        with urllib.request.urlopen(f"{base}/{name}") as response:  # noqa: S310 (fixed https URL)
+            (OUT / name).write_bytes(response.read())
+    return f"{REPO} commit {commit}"
 
 
 def main():
-    if len(sys.argv) != 3:
+    if len(sys.argv) != 2:
         sys.exit(__doc__)
+    source = sys.argv[1]
     if OUT.exists():
         shutil.rmtree(OUT)
     OUT.mkdir(parents=True)
-    described = [
-        copy(repo, source) for repo, source in zip(SOURCES, sys.argv[1:], strict=True)
-    ]
+    path = Path(source)
+    described = from_checkout(path) if path.is_dir() else from_commit(source)
     (OUT / "SOURCE").write_text(
-        "Copied by prototype/update_brand.py from:\n"
-        + "".join(f"- {line}\n" for line in described)
-        + "Don't edit these files here; change them in napari-sphinx-theme or napari-resources.\n",
+        f"Copied by prototype/update_brand.py from {described}.\n"
+        "Don't edit these files here; change them in napari-sphinx-theme.\n",
         encoding="utf-8",
     )
-    count = sum(len(files) for files in SOURCES.values())
-    print(f"copied {count} files from", "; ".join(described))
+    print(f"copied {len(FILES)} files from {described}")
 
 
 if __name__ == "__main__":

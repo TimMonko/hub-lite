@@ -1,8 +1,14 @@
-{#- icon("github"): napari's shared icon (static/brand/icons/), inline,
-    filled with currentColor so it takes the text colour. Decorative: the
-    link text beside it says what it is. The wrapper sets the size, so an
-    SVG's own width and height (napari-resources' logo says 824) don't
-    matter. #}
+{#- icon("github"): an icon drawn inline, filled with currentColor so it
+    takes the text colour. Decorative: the link text beside it says what it
+    is. The wrapper sets the size, so an SVG's own width and height
+    (napari-resources' logo says 824) don't matter.
+
+    icon("napari") is napari-resources' silhouette (the package's folder is
+    on the template path, build.py); the others are napari-sphinx-theme's
+    brand icons (static/brand/icons/, update_brand.py). #}
 {% macro icon(name) -%}
-<span class="icon" aria-hidden="true">{% include "icons/" ~ name ~ ".svg" %}</span>
+<span class="icon" aria-hidden="true">
+  {%- if name == "napari" %}{% include "silhouette-current-color.svg" %}
+  {%- else %}{% include "icons/" ~ name ~ ".svg" %}{% endif -%}
+</span>
 {%- endmacro %}

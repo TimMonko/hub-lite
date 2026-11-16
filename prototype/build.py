@@ -20,6 +20,7 @@ from collections import Counter
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
+from napari_resources import logo_path, special_logo_path
 from page_model import PluginPage, PluginPageData, page_from_data
 from pagefind.index import IndexConfig, PagefindIndex
 
@@ -110,8 +111,15 @@ def home_cards(pages: list[PluginPage], ids: dict[str, str]) -> list[dict]:
 def main():
     start = time.perf_counter()
     env = Environment(
-        # static/brand/ too, so templates can include "icons/github.svg".
-        loader=FileSystemLoader([HERE / "templates", HERE / "static" / "brand"]),
+        # static/brand/ too, so templates can include "icons/github.svg", and
+        # napari-resources' hand-made logos, for "silhouette-current-color.svg".
+        loader=FileSystemLoader(
+            [
+                HERE / "templates",
+                HERE / "static" / "brand",
+                special_logo_path("silhouette-current-color").parent,
+            ]
+        ),
         autoescape=True,
         undefined=StrictUndefined,
         trim_blocks=True,
@@ -132,9 +140,15 @@ def main():
     (OUT / "static" / "js").mkdir(parents=True)
     for name in ("home.js", "theme.js"):
         shutil.copy(HERE / "static" / name, OUT / "static" / "js" / name)
-    # napari-resources' header logos, light and dark (update_brand.py).
-    for logo in (HERE / "static" / "brand" / "logos").glob("*.svg"):
-        shutil.copy(logo, OUT / "static" / "images" / logo.name)
+    # napari's logos from napari-resources, as napari itself uses them: the
+    # header's, light and dark (the dark one's gold border shows on the dark
+    # navbar), and the favicon, which follows the system's colour scheme.
+    images = OUT / "static" / "images"
+    shutil.copy(logo_path("gradient", "plain", "light"), images / "napari-light.svg")
+    shutil.copy(logo_path("gradient", "plain", "dark"), images / "napari-dark.svg")
+    shutil.copy(
+        special_logo_path("silhouette-theme-aware"), images / "napari-favicon.svg"
+    )
 
     sizes = []
     pages = []

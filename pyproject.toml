@@ -13,6 +13,10 @@ dependencies = [
   "beautifulsoup4",
   "jinja2",
   "markdown-it-py[linkify,plugins]",
+  # napari's logos, as napari itself uses them. Needs 1.1.0
+  # (special_logo_path, the currentColor silhouette); see
+  # tool.pixi.pypi-dependencies until it's released.
+  "napari-resources",
   "nh3",
   "packaging",
   "pagefind[extended]",
@@ -35,6 +39,12 @@ package = false
 channels = ["conda-forge"]
 name = "hub-lite"
 platforms = ["win-64", "linux-64", "osx-arm64"]
+
+# PROTOTYPE ONLY: napari-resources from a local checkout of the branch that
+# adds the currentColor silhouette. Once 1.1.0 is released, delete this
+# table and make the dependency above "napari-resources>=1.1.0".
+[tool.pixi.pypi-dependencies]
+napari-resources = { path = "../napari-resources" }
 
 [tool.pixi.environments]
 default = { features = ["dev"], solve-group = "default" }
