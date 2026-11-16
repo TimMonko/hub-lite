@@ -9,20 +9,19 @@ what does it cost?" for the stack decision in napari-plans.
   markup lives here. Asset paths are relative, so pages work from disk.
 - `static/hub.css`: the hub's stylesheet, with readable class names and
   colour tokens (dark mode is one block).
-- `static/brand/`: napari's shared colours (`napari-tokens.css`), code
-  colours (`pygments.css`: `napari` light, `dracula` dark) and icons, copied
-  from napari-sphinx-theme's brand folder by `update_brand.py`. Don't edit
-  them here: napari.org uses the same files. Templates draw an icon inline
-  with `icon("github")`.
-- napari's logos (header, footer silhouette, favicon) come from the
-  `napari-resources` package, a dependency, as in napari itself; `build.py`
-  copies them in. Bumping its version updates them.
+- napari's shared colours (`napari-tokens.css`), code colours
+  (`pygments.css`: `napari` light, `dracula` dark) and icons come from the
+  `napari-sphinx-theme` package's `static/brand/` folder, the files
+  napari.org uses; napari's logos (header, footer silhouette, favicon) come
+  from the `napari-resources` package, as in napari itself. Both are
+  dependencies, so bumping a version updates them. The theme is installed
+  without Sphinx (`dependency-overrides` in `pyproject.toml`). Templates
+  draw an icon inline with `icon("github")`.
 - `build.py`: renders every plugin from the data `pixi run fetch-data` wrote.
 
 ```bash
 pixi run fetch-data
-pixi run python prototype/build.py
-pixi run python -m pagefind --site _build_proto
+pixi run python prototype/build.py   # pages, the Pagefind index, then the home page
 ```
 
 ## Measurements (2026-11-15, 707 plugins, same data, with header, footer and icons)

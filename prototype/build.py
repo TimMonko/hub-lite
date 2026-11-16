@@ -17,6 +17,7 @@ import shutil
 import statistics
 import time
 from collections import Counter
+from importlib.resources import files
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
@@ -28,6 +29,9 @@ HERE = Path(__file__).parent
 ROOT = HERE.parent
 DATA = ROOT / "_build" / "data" / "plugin_page_data.json"
 OUT = ROOT / "_build_proto"
+# napari-sphinx-theme's brand files: colours, code colours, icons. The
+# package is installed without Sphinx (pyproject's dependency-overrides).
+BRAND = Path(str(files("napari_sphinx_theme") / "static" / "brand"))
 
 
 # --- File formats ---------------------------------------------------------
@@ -111,12 +115,13 @@ def home_cards(pages: list[PluginPage], ids: dict[str, str]) -> list[dict]:
 def main():
     start = time.perf_counter()
     env = Environment(
-        # static/brand/ too, so templates can include "icons/github.svg", and
-        # napari-resources' hand-made logos, for "silhouette-current-color.svg".
+        # The theme's brand folder too, so templates can include
+        # "icons/github.svg", and napari-resources' hand-made logos, for
+        # "silhouette-current-color.svg".
         loader=FileSystemLoader(
             [
                 HERE / "templates",
-                HERE / "static" / "brand",
+                BRAND,
                 special_logo_path("silhouette-current-color").parent,
             ]
         ),
@@ -134,9 +139,9 @@ def main():
     shutil.copytree(ROOT / "static" / "images", OUT / "static" / "images")
     (OUT / "static" / "css").mkdir(parents=True)
     shutil.copy(HERE / "static" / "hub.css", OUT / "static" / "css" / "hub.css")
-    # napari's shared colours and code colours (update_brand.py).
+    # napari's shared colours and code colours, from napari-sphinx-theme.
     for name in ("napari-tokens.css", "pygments.css"):
-        shutil.copy(HERE / "static" / "brand" / name, OUT / "static" / "css")
+        shutil.copy(BRAND / name, OUT / "static" / "css")
     (OUT / "static" / "js").mkdir(parents=True)
     for name in ("home.js", "theme.js"):
         shutil.copy(HERE / "static" / name, OUT / "static" / "js" / name)

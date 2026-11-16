@@ -5,7 +5,7 @@
 
     icon("napari") is napari-resources' silhouette (the package's folder is
     on the template path, build.py); the others are napari-sphinx-theme's
-    brand icons (static/brand/icons/, update_brand.py). #}
+    brand icons (its static/brand/icons/, also on the template path). #}
 {% macro icon(name) -%}
 <span class="icon" aria-hidden="true">
   {%- if name == "napari" %}{% include "silhouette-current-color.svg" %}

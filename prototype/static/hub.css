@@ -1,9 +1,9 @@
 /* napari hub: one stylesheet, readable class names.
    Colours are tokens so a dark theme is one block (hub-lite#117).
    napari's own colours (--napari-*: palette, navbar, footer) and the code
-   colours come from napari-sphinx-theme's brand files, loaded before this
-   one (static/brand/, copied by update_brand.py). This file adds the hub's
-   page colours on top. */
+   colours come from napari-sphinx-theme's brand files (the package's
+   static/brand/, copied in by build.py), loaded before this one. This file
+   adds the hub's page colours on top. */
 
 :root {
   --ink: #1a1a1a;

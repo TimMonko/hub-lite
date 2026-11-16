@@ -14,9 +14,12 @@ dependencies = [
   "jinja2",
   "markdown-it-py[linkify,plugins]",
   # napari's logos, as napari itself uses them. Needs 1.1.0
-  # (special_logo_path, the currentColor silhouette); see
-  # tool.pixi.pypi-dependencies until it's released.
+  # (special_logo_path, the currentColor silhouette).
   "napari-resources",
+  # napari's colours, code colours and icons (its static/brand/ folder),
+  # without Sphinx: see dependency-overrides below. Needs the release
+  # that adds brand/.
+  "napari-sphinx-theme",
   "nh3",
   "packaging",
   "pagefind[extended]",
@@ -40,10 +43,23 @@ channels = ["conda-forge"]
 name = "hub-lite"
 platforms = ["win-64", "linux-64", "osx-arm64"]
 
-# PROTOTYPE ONLY: napari-resources from a local checkout of the branch that
-# adds the currentColor silhouette. Once 1.1.0 is released, delete this
-# table and make the dependency above "napari-resources>=1.1.0".
+# PROTOTYPE ONLY: both packages from local checkouts of unreleased branches
+# (napari-resources: the currentColor silhouette; napari-sphinx-theme:
+# brand/03). Once released, delete this table, pin the dependencies above
+# (napari-resources>=1.1.0, napari-sphinx-theme>=<the brand release>), drop
+# the napari-resources override below, and re-lock.
 [tool.pixi.pypi-dependencies]
+napari-resources = { path = "../napari-resources" }
+napari-sphinx-theme = { path = "../napari-sphinx-theme-brand" }
+
+[tool.pixi.pypi-options.dependency-overrides]
+# The hub uses napari-sphinx-theme's brand files, not the Sphinx theme, so
+# drop its Sphinx side: a marker that is never true removes the requirement
+# (the lock's equivalent of `pip install --no-deps`). Importing the theme
+# doesn't import Sphinx (it imports docutils for type hints only).
+pydata-sphinx-theme = { version = ">=0", env-markers = "sys_platform == 'never'" }
+# PROTOTYPE ONLY: the theme branch needs napari-resources>=1.1.0, which the
+# local checkout isn't tagged as yet. Delete at release.
 napari-resources = { path = "../napari-resources" }
 
 [tool.pixi.environments]
