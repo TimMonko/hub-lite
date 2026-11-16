@@ -32,7 +32,7 @@ OUT = ROOT / "_build_proto"
 # --- File formats ---------------------------------------------------------
 
 
-def opened_formats(patterns: list[str]) -> list[str]:
+def read_formats(patterns: list[str]) -> list[str]:
     """Reader filename patterns as file extensions: "*.TIF" -> ".tif".
 
     Patterns that name no extension are left out: "*" (the reader is offered
@@ -46,7 +46,7 @@ def opened_formats(patterns: list[str]) -> list[str]:
     return sorted(formats)
 
 
-def saved_formats(extensions: list[str]) -> list[str]:
+def written_formats(extensions: list[str]) -> list[str]:
     """Writer extensions, lower case, each with its dot: "TIF" -> ".tif"."""
     return sorted(
         {"." + ext.strip().lower().lstrip(".") for ext in extensions if ext.strip(". ")}
@@ -98,8 +98,8 @@ def home_cards(pages: list[PluginPage], ids: dict[str, str]) -> list[dict]:
         {
             "page": page,
             "pagefind_id": ids[page.name],
-            "opens": opened_formats(page.reads),
-            "saves": saved_formats(page.writes),
+            "reads": read_formats(page.reads),
+            "writes": written_formats(page.writes),
         }
         for page in pages
     ]
@@ -144,7 +144,7 @@ def main():
     asyncio.run(index_site())
 
     cards = home_cards(pages, pagefind_ids())
-    formats = Counter(f for card in cards for f in {*card["opens"], *card["saves"]})
+    formats = Counter(f for card in cards for f in {*card["reads"], *card["writes"]})
     pythons = sorted(
         {v for page in pages for v in page.python_versions},
         key=lambda v: tuple(int(part) for part in v.split(".")),

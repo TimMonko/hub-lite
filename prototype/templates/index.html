@@ -36,61 +36,73 @@
       <kbd id="search-hint" class="hint" title="Press / to search">/</kbd>
     </form>
 
-    <div class="filters">
-      <div class="filter">
-        <span class="filter-label" id="type-label">Plugin type</span>
-        <details class="dropdown">
-          <summary aria-describedby="type-label"><span class="dropdown-value">Any</span></summary>
-          <fieldset>
-            <legend class="visually-hidden">Plugin type: any of</legend>
-            {%- for value, label in type_labels.items() %}
-            <label><input type="checkbox" name="pluginType" value="{{ value }}"> {{ label }}</label>
-            {%- endfor %}
-          </fieldset>
-        </details>
-      </div>
+    {#- On a phone the filters fold behind this button (hub.css); wider, it's hidden. #}
+    <button type="button" class="filters-button" aria-expanded="false" aria-controls="filters">
+      Filters <span class="badge" hidden></span>
+    </button>
 
-      <div class="filter">
-        <label class="filter-label" for="format">File format</label>
-        <div class="format">
-          <input id="format" name="format" list="formats" autocomplete="off" spellcheck="false"
-                 placeholder=".tif, .czi, .zarr…" size="11">
-          <label class="visually-hidden" for="formatMode">Which way</label>
-          <select id="formatMode" name="formatMode">
-            <option value="any">opens or saves</option>
-            <option value="opens">opens</option>
-            <option value="saves">saves</option>
+    <div class="filters" id="filters">
+      <div class="filter-row">
+        <div class="filter">
+          <span class="filter-label" id="type-label">Plugin type</span>
+          <details class="dropdown">
+            <summary aria-describedby="type-label"><span class="dropdown-value">Any</span></summary>
+            <fieldset>
+              <legend class="visually-hidden">Plugin type: any of</legend>
+              {%- for value, label in type_labels.items() %}
+              <label><input type="checkbox" name="pluginType" value="{{ value }}"> {{ label }}</label>
+              {%- endfor %}
+            </fieldset>
+          </details>
+        </div>
+
+        <div class="filter">
+          <label class="filter-label" for="sort">Sort</label>
+          <select id="sort" name="sort">
+            <option value="best">Best match</option>
+            <option value="updated">Recently updated</option>
+            <option value="released">Newest</option>
+            <option value="name">Name</option>
           </select>
         </div>
-        <datalist id="formats">
-          {%- for f in formats %}<option value="{{ f }}">{% endfor -%}
-        </datalist>
+
+        <div class="filter">
+          <label class="filter-label" for="updatedSince">Updated since</label>
+          <input id="updatedSince" name="updatedSince" type="date">
+        </div>
+
+        <button type="button" class="clear" hidden>Clear filters</button>
       </div>
 
-      <div class="filter">
-        <label class="filter-label" for="python">Python</label>
-        <select id="python" name="python">
-          <option value="">Any</option>
-          {%- for v in python_versions %}<option value="{{ v }}">{{ v }}</option>{% endfor %}
-        </select>
-      </div>
+      <details class="advanced">
+        <summary>More filters <span class="badge" hidden></span></summary>
+        <div class="filter-row">
+          <div class="filter">
+            <label class="filter-label" for="format">File format</label>
+            <div class="format">
+              <input id="format" name="format" list="formats" autocomplete="off" spellcheck="false"
+                     placeholder=".tif, .czi, .zarr…" size="11">
+              <label class="visually-hidden" for="formatMode">Which way</label>
+              <select id="formatMode" name="formatMode">
+                <option value="any">reads or writes</option>
+                <option value="reads">reads</option>
+                <option value="writes">writes</option>
+              </select>
+            </div>
+            <datalist id="formats">
+              {%- for f in formats %}<option value="{{ f }}">{% endfor -%}
+            </datalist>
+          </div>
 
-      <div class="filter">
-        <label class="filter-label" for="updatedSince">Updated since</label>
-        <input id="updatedSince" name="updatedSince" type="date">
-      </div>
-
-      <div class="filter">
-        <label class="filter-label" for="sort">Sort</label>
-        <select id="sort" name="sort">
-          <option value="best">Best match</option>
-          <option value="updated">Recently updated</option>
-          <option value="released">Newest</option>
-          <option value="name">Name</option>
-        </select>
-      </div>
-
-      <button type="button" class="clear" hidden>Clear filters</button>
+          <div class="filter">
+            <label class="filter-label" for="python">Python</label>
+            <select id="python" name="python">
+              <option value="">Any</option>
+              {%- for v in python_versions %}<option value="{{ v }}">{{ v }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+      </details>
     </div>
   </search>
 
@@ -106,8 +118,8 @@
         data-released="{{ page.first_released or '' }}"
         data-types="{{ page.plugin_types | join(' ') }}"
         data-python="{{ page.python_versions | join(' ') }}"
-        data-opens="{{ card.opens | join(' ') }}"
-        data-saves="{{ card.saves | join(' ') }}">
+        data-reads="{{ card.reads | join(' ') }}"
+        data-writes="{{ card.writes | join(' ') }}">
       <h3><a href="{{ root }}plugins/{{ page.name }}.html">{{ page.display_name }}</a></h3>
       <p class="card-summary">{{ page.summary }}</p>
       <p class="card-meta">

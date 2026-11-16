@@ -18,6 +18,10 @@ const pythonSelect = finder.querySelector("#python");
 const sinceInput = finder.querySelector("#updatedSince");
 const sortSelect = finder.querySelector("#sort");
 const clearButton = finder.querySelector(".clear");
+const advanced = finder.querySelector(".advanced");
+const advancedBadge = advanced.querySelector(".badge");
+const filtersButton = finder.querySelector(".filters-button");
+const filtersBadge = filtersButton.querySelector(".badge");
 const count = document.querySelector(".count");
 const list = document.getElementById("plugins");
 const cards = [...list.children];
@@ -26,10 +30,11 @@ const state = {
   q: "",
   types: new Set(), // any of
   format: "", // ".tif"
-  formatMode: "any", // "any" | "opens" | "saves"
+  formatMode: "any", // "any" | "reads" | "writes"
   python: "",
   since: "", // YYYY-MM-DD
-  sort: "", // "" = best match while searching, else recently updated
+  sort: "", // "" = best match while searching, else recently updated.
+  // A new search starts at best match again (setQuery).
 };
 let rank = null; // the current search's results: Pagefind id -> position
 
@@ -78,7 +83,7 @@ function matches(card) {
   if (state.since && !(card.dataset.updated >= state.since)) return false;
   if (state.format) {
     const formats = state.formatMode === "any"
-      ? [...words(card, "opens"), ...words(card, "saves")]
+      ? [...words(card, "reads"), ...words(card, "writes")]
       : words(card, state.formatMode);
     if (!formats.some((f) => f.startsWith(state.format) || f.endsWith(state.format))) return false;
   }
@@ -97,8 +102,17 @@ function effectiveSort() {
   return state.sort;
 }
 
+// How many filters are set: in all, and in "More filters".
+function advancedCount() {
+  return (state.format ? 1 : 0) + (state.python ? 1 : 0);
+}
 function filtersActive() {
-  return state.types.size || state.format || state.python || state.since;
+  return (state.types.size ? 1 : 0) + (state.since ? 1 : 0) + advancedCount();
+}
+
+function showBadge(badge, n) {
+  badge.hidden = !n;
+  badge.textContent = n;
 }
 
 function render() {
@@ -120,6 +134,8 @@ function render() {
     ? typeBoxes.filter((b) => b.checked).map((b) => b.parentElement.textContent.trim()).join(", ")
     : "Any";
   clearButton.hidden = !filtersActive();
+  showBadge(advancedBadge, advancedCount());
+  showBadge(filtersBadge, filtersActive());
   writeUrl();
 }
 
@@ -139,14 +155,14 @@ function readUrl() {
   state.q = (params.get("q") ?? "").trim();
   state.types = new Set(params.getAll("pluginType"));
   state.format = normalizeFormat(params.get("format") ?? "");
-  state.formatMode = ["opens", "saves"].includes(params.get("formatMode")) ? params.get("formatMode") : "any";
+  state.formatMode = ["reads", "writes"].includes(params.get("formatMode")) ? params.get("formatMode") : "any";
   // Plugin pages link with napari hub's older names for these.
   if (params.get("readerFileExtensions")) {
     state.format = normalizeFormat(params.get("readerFileExtensions"));
-    state.formatMode = "opens";
+    state.formatMode = "reads";
   } else if (params.get("writerFileExtensions")) {
     state.format = normalizeFormat(params.get("writerFileExtensions"));
-    state.formatMode = "saves";
+    state.formatMode = "writes";
   }
   state.python = params.get("python") ?? "";
   state.since = params.get("updatedSince") ?? "";
@@ -159,6 +175,7 @@ function readUrl() {
   pythonSelect.value = state.python;
   if (pythonSelect.value !== state.python) state.python = ""; // not an offered version
   sinceInput.value = state.since;
+  advanced.open = advancedCount() > 0; // a link with a format or Python filter shows it
 }
 
 function writeUrl() {
@@ -182,15 +199,22 @@ const whenIdle = window.requestIdleCallback ?? ((callback) => setTimeout(callbac
 if (document.readyState === "complete") whenIdle(pagefind);
 else window.addEventListener("load", () => whenIdle(pagefind), { once: true });
 
-input.addEventListener("input", () => {
-  state.q = input.value.trim();
+// A sort chosen for one search (or while browsing) doesn't carry into the
+// next: starting a search goes back to best match, and clearing it leaves
+// best match for recently updated.
+function setQuery(text) {
+  const before = state.q;
+  state.q = text.trim();
+  if (!before && state.q) state.sort = "";
+  if (before && !state.q && state.sort === "best") state.sort = "";
   update();
-});
+}
+
+input.addEventListener("input", () => setQuery(input.value));
 input.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && input.value) {
     input.value = "";
-    state.q = "";
-    update();
+    setQuery("");
   }
 });
 finder.querySelector("form").addEventListener("submit", (event) => event.preventDefault());
@@ -240,6 +264,13 @@ clearButton.addEventListener("click", () => {
   pythonSelect.value = "";
   sinceInput.value = "";
   render();
+});
+
+// Phones: the filters fold behind a button (hub.css shows it only there).
+filtersButton.addEventListener("click", () => {
+  const open = filtersButton.getAttribute("aria-expanded") !== "true";
+  filtersButton.setAttribute("aria-expanded", String(open));
+  finder.classList.toggle("filters-open", open);
 });
 
 document.addEventListener("keydown", (event) => {

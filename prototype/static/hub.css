@@ -13,6 +13,10 @@
   --rule: #d9dde1;
   --accent: #0074b8; /* napari hub blue, as in the README badge */
   --measure: 72ch;
+  /* Header, page and footer share one centred column, as on napari-hub.org
+     today: at most --page wide, with a gutter on small screens. */
+  --page: 72rem;
+  --gutter: max(clamp(1rem, 4vw, 3rem), calc((100% - var(--page)) / 2));
 
   font-family: system-ui, sans-serif; /* as napari.org: no web fonts */
   line-height: 1.5;
@@ -33,7 +37,7 @@
 }
 
 body { margin: 0; display: flex; flex-direction: column; min-height: 100vh; }
-main { flex: 1; padding: 1.5rem clamp(1rem, 4vw, 3rem); }
+main { flex: 1; padding: 1.5rem var(--gutter); }
 a { color: var(--accent); }
 img { max-width: 100%; height: auto; }
 code, pre, kbd { font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace; font-size: 0.9em; }
@@ -48,7 +52,7 @@ code, pre, kbd { font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, m
   flex-wrap: wrap;
   gap: 0.75rem 2rem;
   align-items: center;
-  padding: 0.75rem clamp(1rem, 4vw, 3rem);
+  padding: 0.75rem var(--gutter);
   background: var(--napari-navbar);
   color: var(--napari-navbar-text);
 }
@@ -64,7 +68,7 @@ code, pre, kbd { font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, m
   gap: 1rem 2rem;
   align-items: center;
   justify-content: space-between;
-  padding: 1.5rem clamp(1rem, 4vw, 3rem);
+  padding: 1.5rem var(--gutter);
   margin-top: 3rem;
   background: var(--napari-footer);
   color: var(--napari-footer-text);
@@ -98,9 +102,33 @@ code, pre, kbd { font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, m
   padding: 0 0.4rem; border: 1px solid var(--rule); border-radius: 4px; color: var(--muted);
 }
 .search-form input:focus + .hint { display: none; }
+@media (pointer: coarse) { .hint { display: none; } } /* no "/" key on a touchscreen */
 
 /* The filter bar: each filter is a small label over its control. */
-.filters { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; align-items: end; }
+.filters { display: grid; gap: 0.75rem; }
+.filter-row { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; align-items: end; }
+
+/* "More filters": file format and Python, folded until wanted. */
+.advanced > summary { cursor: pointer; color: var(--accent); width: fit-content; }
+.advanced[open] > summary { margin-bottom: 0.5rem; }
+
+/* A count of the filters set, beside "Filters" and "More filters". */
+.badge {
+  display: inline-grid; place-items: center; min-width: 1.3em; height: 1.3em; padding: 0 0.3em;
+  font-size: 0.75rem; font-weight: 700; border-radius: 999px; color: var(--paper); background: var(--accent);
+}
+.badge[hidden] { display: none; }
+
+/* Phones: the filters fold behind a "Filters" button. */
+.filters-button { display: none; }
+@media (max-width: 40rem) {
+  .filters-button {
+    display: inline-flex; align-items: center; gap: 0.4rem; width: fit-content;
+    height: 2.25rem; padding: 0 0.8rem; font: inherit; color: inherit; cursor: pointer;
+    background: var(--paper); border: 1px solid var(--rule); border-radius: 6px;
+  }
+  .finder:not(.filters-open) .filters { display: none; }
+}
 .filter { display: grid; gap: 0.2rem; }
 .filter-label { font-size: 0.8rem; font-weight: 700; color: var(--muted); }
 .filters select, .filters input, .dropdown summary {
@@ -135,7 +163,8 @@ code, pre, kbd { font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, m
 .count { color: var(--muted); margin: 0 0 0.75rem; }
 .cards {
   display: grid; gap: 1rem; list-style: none; padding: 0; margin: 0;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  /* As many 18rem columns as fit, but never more than three. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, max(18rem, calc((100% - 2rem) / 3))), 1fr));
 }
 .card {
   display: flex; flex-direction: column; gap: 0.35rem;
