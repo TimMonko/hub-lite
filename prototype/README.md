@@ -11,8 +11,9 @@ what does it cost?" for the stack decision in napari-plans.
   colour tokens (dark mode is one block).
 - `static/brand/`: napari's shared colours (`napari-tokens.css`), code
   colours (`pygments.css`: `napari` light, `dracula` dark) and icons, copied
-  from napari-sphinx-theme's brand folder by `update_brand.py`. Don't edit
-  them here: napari.org uses the same files. Templates draw an icon inline
+  from napari-sphinx-theme's brand folder, plus the napari logo
+  (`icons/napari.svg`) from napari-resources, by `update_brand.py`. Don't
+  edit them here: napari.org uses the same files. Templates draw an icon inline
   with `icon("github")`.
 - `build.py`: renders every plugin from the data `pixi run fetch-data` wrote.
 

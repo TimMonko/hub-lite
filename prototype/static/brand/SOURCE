@@ -1,2 +1,4 @@
-Copied by prototype/update_brand.py from a napari-sphinx-theme checkout (napari-sphinx-theme-brand); pin a release commit before merging.
-Don't edit these files here; change them in napari-sphinx-theme.
+Copied by prototype/update_brand.py from:
+- a napari-sphinx-theme checkout (napari-sphinx-theme-brand); pin a release commit before merging
+- a napari-resources checkout (napari-resources); pin a release commit before merging
+Don't edit these files here; change them in napari-sphinx-theme or napari-resources.
