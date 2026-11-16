@@ -49,6 +49,8 @@ class PluginPageData:
     contributions_writers_filename_extensions: list[str]
     contributions_widgets: list[str]
     contributions_sample_data: list[str]
+    # Theme labels; absent from data fetched before themes were recorded.
+    contributions_themes: list[str] = dataclasses.field(default_factory=list)
 
 
 FALLBACK_LEXER = PythonLexer()
@@ -312,6 +314,7 @@ def get_plugin_types(plugin: PluginPageData):
             (plugin.contributions_writers_filename_extensions, "writer"),
             (plugin.contributions_widgets, "widget"),
             (plugin.contributions_sample_data, "sample_data"),
+            (plugin.contributions_themes, "theme"),
         ]
         if condition
     ]

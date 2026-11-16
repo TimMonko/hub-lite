@@ -346,6 +346,8 @@ def get_plugin_page_data_from_api(plugin_summary_data):
         sample["display_name"] for sample in contributions["sample_data"] or []
     ]
 
+    themes = [theme["label"] for theme in contributions.get("themes") or []]
+
     return PluginPageData(
         normalized_name=plugin_normalized_name,
         name=name,
@@ -369,6 +371,7 @@ def get_plugin_page_data_from_api(plugin_summary_data):
         contributions_writers_filename_extensions=writer_extensions,
         contributions_widgets=widgets,
         contributions_sample_data=sample_data,
+        contributions_themes=themes,
     )
 
 
@@ -386,6 +389,7 @@ def create_search_index(plugins: list[PluginPageData], data_dir: str):
             "filename_extensions": plugin.contributions_writers_filename_extensions,
             "widgets": plugin.contributions_widgets,
             "sample_data": plugin.contributions_sample_data,
+            "themes": plugin.contributions_themes,
             "contributions": get_plugin_types(plugin),
         }
         for plugin in plugins
