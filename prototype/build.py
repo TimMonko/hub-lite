@@ -25,7 +25,8 @@ OUT = ROOT / "_build_proto"
 def main():
     start = time.perf_counter()
     env = Environment(
-        loader=FileSystemLoader(HERE / "templates"),
+        # static/brand/ too, so templates can include "icons/github.svg".
+        loader=FileSystemLoader([HERE / "templates", HERE / "static" / "brand"]),
         autoescape=True,
         undefined=StrictUndefined,
         trim_blocks=True,
@@ -40,7 +41,9 @@ def main():
     shutil.copytree(ROOT / "static" / "images", OUT / "static" / "images")
     (OUT / "static" / "css").mkdir(parents=True)
     shutil.copy(HERE / "static" / "hub.css", OUT / "static" / "css" / "hub.css")
-    shutil.copy(HERE / "static" / "pygments.css", OUT / "static" / "css")
+    # napari's shared colours and code colours (update_brand.py).
+    for name in ("napari-tokens.css", "pygments.css"):
+        shutil.copy(HERE / "static" / "brand" / name, OUT / "static" / "css")
 
     sizes = []
     for plugin in plugins:

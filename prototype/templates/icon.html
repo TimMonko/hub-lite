@@ -1,6 +1,6 @@
-{#- icon("github"): the SVG in templates/icons/, inline, filled with
-    currentColor so it takes the text colour. Decorative: the link text
-    beside it says what it is. #}
+{#- icon("github"): napari's shared icon (static/brand/icons/), inline,
+    filled with currentColor so it takes the text colour. Decorative: the
+    link text beside it says what it is. #}
 {% macro icon(name) -%}
 {% include "icons/" ~ name ~ ".svg" %}
 {%- endmacro %}
