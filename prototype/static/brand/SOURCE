@@ -1,4 +1,4 @@
 Copied by prototype/update_brand.py from:
-- a napari-sphinx-theme checkout (napari-sphinx-theme-brand); pin a release commit before merging
-- a napari-resources checkout (napari-resources); pin a release commit before merging
+- a napari-sphinx-theme checkout (napari-sphinx-theme-brand) at commit 094960144e86d03bc105a81297082a2a834b38d3
+- a napari-resources checkout (napari-resources) at commit 4e2f55cd19742281f0a33bf2738081d253536b05
 Don't edit these files here; change them in napari-sphinx-theme or napari-resources.

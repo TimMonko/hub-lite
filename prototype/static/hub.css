@@ -22,10 +22,14 @@
   line-height: 1.5;
   color: var(--ink);
   background: var(--paper);
+  color-scheme: light;
 }
 
+/* Dark mode follows the system setting, unless the navbar toggle (theme.js)
+   set <html data-theme>: the same rule as napari-tokens.css. The dark values
+   appear twice, once per way in; keep the two blocks the same. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --ink: #e6e8ea;
     --muted: #b4bcc6;
     --paper: #14181e;
@@ -35,6 +39,24 @@
     color-scheme: dark; /* dark scrollbars and form controls */
   }
 }
+:root[data-theme='dark'] {
+  --ink: #e6e8ea;
+  --muted: #b4bcc6;
+  --paper: #14181e;
+  --panel: #1f242b;
+  --rule: #3a414a;
+  --accent: var(--napari-primary-blue);
+  color-scheme: dark; /* dark scrollbars and form controls */
+}
+
+/* The header logo, light or dark, by the same rule. */
+.logo-dark { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .logo-light { display: none; }
+  :root:not([data-theme='light']) .logo-dark { display: inline; }
+}
+:root[data-theme='dark'] .logo-light { display: none; }
+:root[data-theme='dark'] .logo-dark { display: inline; }
 
 body { margin: 0; display: flex; flex-direction: column; min-height: 100vh; }
 main { flex: 1; padding: 1.5rem var(--gutter); }
@@ -60,6 +82,17 @@ code, pre, kbd { font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, m
 .site-header a:hover { text-decoration: underline; }
 .site-title { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 1.25rem; }
 .site-header nav { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
+/* The light / dark / auto button, at the header's right end. */
+.theme-toggle {
+  display: inline-grid; place-items: center; width: 2.25rem; height: 2.25rem; margin-left: auto;
+  padding: 0; color: inherit; background: none; border: 1px solid transparent; border-radius: 6px; cursor: pointer;
+}
+.theme-toggle:hover { border-color: currentColor; }
+.theme-toggle[hidden] { display: none; }
+.theme-icon { grid-area: 1 / 1; width: 1.25rem; height: 1.25rem; display: none; }
+.theme-toggle[data-mode='light'] [data-for='light'],
+.theme-toggle[data-mode='dark'] [data-for='dark'],
+.theme-toggle[data-mode='auto'] [data-for='auto'] { display: block; }
 
 /* Site footer: napari.org's footer */
 .site-footer {

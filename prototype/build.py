@@ -130,7 +130,11 @@ def main():
     for name in ("napari-tokens.css", "pygments.css"):
         shutil.copy(HERE / "static" / "brand" / name, OUT / "static" / "css")
     (OUT / "static" / "js").mkdir(parents=True)
-    shutil.copy(HERE / "static" / "home.js", OUT / "static" / "js" / "home.js")
+    for name in ("home.js", "theme.js"):
+        shutil.copy(HERE / "static" / name, OUT / "static" / "js" / name)
+    # napari-resources' header logos, light and dark (update_brand.py).
+    for logo in (HERE / "static" / "brand" / "logos").glob("*.svg"):
+        shutil.copy(logo, OUT / "static" / "images" / logo.name)
 
     sizes = []
     pages = []

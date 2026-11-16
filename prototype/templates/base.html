@@ -9,6 +9,13 @@
     {#- The address bar takes the header's colour, as on napari.org. #}
     <meta name="theme-color" content="#80d1ff" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#4d485c" media="(prefers-color-scheme: dark)">
+    {#- A reader's saved light/dark choice (theme.js), applied before the first
+        paint so the page doesn't flash the other theme. No choice: the CSS
+        follows the system setting. #}
+    <script>
+      try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}
+    </script>
+    <script type="module" src="{{ root }}static/js/theme.js"></script>
     {% block head %}{% endblock %}
     {#- Relative asset paths: the site works from a file, a CI artifact or a sub-path. #}
     <link rel="icon" href="{{ root }}static/images/silhouette-theme-aware.svg">
@@ -21,7 +28,9 @@
         bar (purple in dark mode) and a black footer of icon links. #}
     <header class="site-header">
       <a class="site-title" href="{{ root }}index.html">
-        <img src="{{ root }}static/images/napari-logo.svg" alt="" width="32" height="32">
+        {#- napari-resources' logos: the dark one's gold border shows on the dark navbar. #}
+        <img class="logo-light" src="{{ root }}static/images/napari-light.svg" alt="" width="32" height="32">
+        <img class="logo-dark" src="{{ root }}static/images/napari-dark.svg" alt="" width="32" height="32">
         napari hub
       </a>
       <nav aria-label="Site">
@@ -29,6 +38,14 @@
         <a href="https://napari.org/stable/plugins/">Plugin docs</a>
         <a href="https://napari.org">napari.org</a>
       </nav>
+      {#- Cycles light, dark, auto (follow the system), as on napari.org.
+          Hidden until theme.js runs, since it does nothing without it. #}
+      <button type="button" class="theme-toggle" hidden>
+        <svg class="theme-icon" data-for="light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <svg class="theme-icon" data-for="dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.6A8.5 8.5 0 1 1 9.4 3.5a7 7 0 0 0 11.1 11.1Z" fill="currentColor"/></svg>
+        <svg class="theme-icon" data-for="auto" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor"/></svg>
+        <span class="visually-hidden"></span>
+      </button>
     </header>
     <main>
       {% block main %}{% endblock %}
