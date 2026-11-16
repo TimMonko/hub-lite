@@ -8,7 +8,6 @@ hub's plugin pages"). It reads the data today's build fetched
 """
 
 import json
-import re
 import shutil
 import statistics
 import time
@@ -21,30 +20,6 @@ HERE = Path(__file__).parent
 ROOT = HERE.parent
 DATA = ROOT / "_build" / "data" / "plugin_page_data.json"
 OUT = ROOT / "_build_proto"
-
-
-def write_icon_sprite(path: Path):
-    """Combine icons/*.svg into one sprite of <symbol>s, one per file name.
-
-    Pages draw an icon with <use href=".../icons.svg#github">, so the icons
-    download once and are cached, instead of adding ~11 KB to every page.
-    Each icon is filled with currentColor, so it takes the text colour.
-    """
-    symbols = []
-    for icon in sorted((HERE / "icons").glob("*.svg")):
-        svg = icon.read_text("utf-8")
-        match = re.search(r'viewBox="([^"]+)"', svg)
-        if not match:
-            raise ValueError(f"{icon} has no viewBox")
-        view_box = match[1]
-        inner = svg[svg.index(">") + 1 : svg.rindex("</svg>")]
-        symbols.append(
-            f'<symbol id="{icon.stem}" viewBox="{view_box}">{inner}</symbol>'
-        )
-    path.write_text(
-        '<svg xmlns="http://www.w3.org/2000/svg">' + "".join(symbols) + "</svg>\n",
-        encoding="utf-8",
-    )
 
 
 def main():
@@ -66,7 +41,6 @@ def main():
     (OUT / "static" / "css").mkdir(parents=True)
     shutil.copy(HERE / "static" / "hub.css", OUT / "static" / "css" / "hub.css")
     shutil.copy(HERE / "static" / "pygments.css", OUT / "static" / "css")
-    write_icon_sprite(OUT / "static" / "images" / "icons.svg")
 
     sizes = []
     for plugin in plugins:
