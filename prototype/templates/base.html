@@ -1,3 +1,4 @@
+{% from "icon.html" import icon with context %}
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -5,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}napari hub{% endblock %}</title>
     <meta name="description" content="{% block description %}Discover napari plugins{% endblock %}">
+    {#- The address bar takes the header's colour, as on napari.org. #}
+    <meta name="theme-color" content="#80d1ff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#4d485c" media="(prefers-color-scheme: dark)">
     {% block head %}{% endblock %}
     {#- Relative asset paths: the site works from a file, a CI artifact or a sub-path. #}
     <link rel="icon" href="{{ root }}static/images/silhouette-theme-aware.svg">
@@ -12,8 +16,13 @@
     <link rel="stylesheet" href="{{ root }}static/css/pygments.css">
   </head>
   <body>
+    {#- Header and footer follow napari.org (napari-sphinx-theme): a light-blue
+        bar (purple in dark mode) and a black footer of icon links. #}
     <header class="site-header">
-      <a class="site-title" href="{{ root }}index.html">napari hub</a>
+      <a class="site-title" href="{{ root }}index.html">
+        <img src="{{ root }}static/images/napari-logo.svg" alt="" width="32" height="32">
+        napari hub
+      </a>
       <nav aria-label="Site">
         <a href="{{ root }}plugins_list.html">Browse plugins</a>
         <a href="https://napari.org/stable/plugins/">Plugin docs</a>
@@ -24,6 +33,13 @@
       {% block main %}{% endblock %}
     </main>
     <footer class="site-footer">
+      <nav class="footer-links" aria-label="napari community">
+        <a href="https://napari.org">{{ icon("napari") }}<span>napari</span></a>
+        <a href="https://github.com/napari/hub-lite">{{ icon("github") }}<span>Code</span></a>
+        <a href="https://fosstodon.org/@napari" rel="me">{{ icon("mastodon") }}<span>Mastodon</span></a>
+        <a href="https://forum.image.sc/tag/napari">{{ icon("image-sc") }}<span>Forum</span></a>
+        <a href="https://napari.zulipchat.com">{{ icon("zulip") }}<span>Chat</span></a>
+      </nav>
       <p>Plugin data from the <a href="https://api.napari.org">napari plugin API</a>.</p>
     </footer>
   </body>

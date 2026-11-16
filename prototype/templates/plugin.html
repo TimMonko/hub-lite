@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "icon.html" import icon with context %}
 {#- One plugin's page. Every value comes from page_model.PluginPage.
     The data-pagefind-* names are a contract with search (R13): keep them. -#}
 
@@ -34,7 +35,10 @@
     </p>
     <ul class="links">
       {%- for link in page.links %}
-      <li><a class="link link-{{ link.kind }}" href="{{ link.url }}" rel="noreferrer">{{ link.label }}</a></li>
+      <li><a class="link" href="{{ link.url }}" rel="noreferrer">
+        {%- if link.kind == "pypi" %}{{ icon("pypi") }}
+        {%- elif link.kind == "github" %}{{ icon("github") }}
+        {%- endif %}{{ link.label }}</a></li>
       {%- endfor %}
     </ul>
   </header>

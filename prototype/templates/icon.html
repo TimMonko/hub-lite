@@ -1,0 +1,5 @@
+{#- icon("github"): an icon from the sprite build.py writes from prototype/icons/.
+    Decorative: the link text beside it says what it is. #}
+{% macro icon(name) -%}
+<svg class="icon" aria-hidden="true" focusable="false"><use href="{{ root }}static/images/icons.svg#{{ name }}"></use></svg>
+{%- endmacro %}

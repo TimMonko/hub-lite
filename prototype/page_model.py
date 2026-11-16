@@ -17,7 +17,7 @@ from create_static_html_files import (  # noqa: E402
     PluginPageData,
     extract_github_info,
     get_plugin_types,
-    md,
+    render_readme,
     supported_python_versions,
 )
 
@@ -28,7 +28,7 @@ MISSING = {"", "n/a", "none", "nan"}
 class Link:
     label: str
     url: str
-    kind: str  # "pypi", "source" or "website": picks the icon
+    kind: str  # "pypi", "github", "source" or "website": picks the icon
 
 
 @dataclasses.dataclass
@@ -55,8 +55,10 @@ def page_from_data(plugin: PluginPageData) -> PluginPage:
     links = [Link("PyPI", plugin.home_pypi, "pypi")]
     if plugin.home_github and plugin.home_github.lower() not in MISSING:
         user, repo = extract_github_info(plugin.home_github)
-        label = f"{user}/{repo}" if user and repo else "Source code"
-        links.append(Link(label, plugin.home_github, "source"))
+        if user and repo:
+            links.append(Link(f"{user}/{repo}", plugin.home_github, "github"))
+        else:
+            links.append(Link("Source code", plugin.home_github, "source"))
     if plugin.home_other and plugin.home_other.lower() not in MISSING:
         links.append(Link("Website", plugin.home_other, "website"))
 
@@ -84,14 +86,7 @@ def page_from_data(plugin: PluginPageData) -> PluginPage:
         requirements=plugin.package_metadata_requires_dist,
         reads=plugin.contributions_readers_filename_patterns,
         writes=plugin.contributions_writers_filename_extensions,
-        readme_html=render_readme(plugin.package_metadata_description),
+        readme_html=render_readme(
+            plugin.package_metadata_description or "", plugin.home_github
+        ),
     )
-
-
-def render_readme(markdown: str) -> str:
-    if not markdown:
-        return ""
-    lines = markdown.split("\n")
-    if lines and lines[0].startswith("#"):
-        lines = lines[1:]  # the page already shows the name as its heading
-    return md.render("\n".join(lines))
